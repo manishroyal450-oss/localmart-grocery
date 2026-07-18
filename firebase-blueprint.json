@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A grocery product item in the catalog",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "originalPrice": { "type": "number" },
+        "unit": { "type": "string" },
+        "stock": { "type": "number" },
+        "image": { "type": "string" },
+        "description": { "type": "string" },
+        "isAvailable": { "type": "boolean" }
+      },
+      "required": ["id", "name", "category", "price", "unit", "stock", "image", "isAvailable"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A customer grocery order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerAddress": { "type": "string" },
+        "deliveryType": { "type": "string", "enum": ["delivery", "pickup"] },
+        "items": { "type": "array" },
+        "totalAmount": { "type": "number" },
+        "savings": { "type": "number" },
+        "status": { "type": "string", "enum": ["Pending", "Accepted", "Packed", "Out for Delivery", "Completed", "Cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "customerName", "customerPhone", "customerAddress", "deliveryType", "items", "totalAmount", "savings", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Collection of grocery products in the inventory"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of customer orders"
+    }
+  }
+}
