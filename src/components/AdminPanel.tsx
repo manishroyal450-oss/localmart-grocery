@@ -345,7 +345,7 @@ export default function AdminPanel({
       <div className="mb-4">
         <button
           onClick={onExitAdmin}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#ff9f00] hover:bg-orange-600 text-white font-extrabold text-xs rounded-lg transition-all shadow-md"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-750 text-white font-extrabold text-xs rounded-lg transition-all shadow-md"
           id="admin-exit-to-store"
         >
           ← Back to Store ❌
@@ -356,7 +356,7 @@ export default function AdminPanel({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-6 mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-            <Settings className="h-6 w-6 text-[#2874f0] animate-spin-slow" />
+            <Settings className="h-6 w-6 text-emerald-800 animate-spin-slow" />
             Local Store Manager Console
           </h1>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -370,7 +370,7 @@ export default function AdminPanel({
             onClick={() => setActiveTab('products')}
             className={`px-4 py-2 text-xs font-bold rounded-md transition flex items-center gap-1.5 ${
               activeTab === 'products' 
-                ? 'bg-white text-[#2874f0] shadow-sm' 
+                ? 'bg-white text-emerald-850 shadow-sm font-black border border-emerald-100' 
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -382,7 +382,7 @@ export default function AdminPanel({
             onClick={() => setActiveTab('orders')}
             className={`px-4 py-2 text-xs font-bold rounded-md transition flex items-center gap-1.5 relative ${
               activeTab === 'orders' 
-                ? 'bg-white text-[#2874f0] shadow-sm' 
+                ? 'bg-white text-emerald-850 shadow-sm font-black border border-emerald-100' 
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -397,7 +397,7 @@ export default function AdminPanel({
             onClick={() => setActiveTab('settings')}
             className={`px-4 py-2 text-xs font-bold rounded-md transition flex items-center gap-1.5 ${
               activeTab === 'settings' 
-                ? 'bg-white text-[#2874f0] shadow-sm' 
+                ? 'bg-white text-emerald-850 shadow-sm font-black border border-emerald-100' 
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -409,7 +409,7 @@ export default function AdminPanel({
             onClick={() => setActiveTab('bulk-upload')}
             className={`px-4 py-2 text-xs font-bold rounded-md transition flex items-center gap-1.5 ${
               activeTab === 'bulk-upload' 
-                ? 'bg-white text-[#2874f0] shadow-sm' 
+                ? 'bg-white text-emerald-850 shadow-sm font-black border border-emerald-100' 
                 : 'text-gray-600 hover:text-gray-900'
             }`}
             id="admin-bulk-image-upload-tab"
@@ -452,7 +452,7 @@ export default function AdminPanel({
             {/* Add product button */}
             <button
               onClick={handleOpenAddForm}
-              className="bg-[#2874f0] hover:bg-blue-600 text-white font-bold text-xs px-5 py-2.5 rounded shadow flex items-center gap-1.5 self-stretch md:self-auto transition"
+              className="bg-emerald-800 hover:bg-emerald-950 text-white font-bold text-xs px-5 py-2.5 rounded shadow flex items-center gap-1.5 self-stretch md:self-auto transition"
               id="admin-add-product-trigger"
             >
               <Plus className="h-4 w-4" />
@@ -549,7 +549,7 @@ export default function AdminPanel({
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => handleOpenEditForm(p)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded border border-transparent hover:border-blue-200 transition"
+                              className="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded border border-transparent hover:border-emerald-200 transition"
                               title="Edit product"
                             >
                               <Edit className="h-4 w-4" />
@@ -617,7 +617,7 @@ export default function AdminPanel({
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-500 font-semibold">Change Status:</span>
                       <select
-                        className="px-2 py-1.5 bg-white border border-gray-300 rounded text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-700"
+                        className="px-2 py-1.5 bg-white border border-gray-300 rounded text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-700"
                         value={order.status}
                         onChange={(e) => handleOrderAction(order.id, e.target.value as any)}
                         id={`status-select-${order.id}`}
@@ -680,7 +680,7 @@ export default function AdminPanel({
                       {/* Total Amount card */}
                       <div className="border-t border-dashed pt-3 flex justify-between items-center text-sm font-extrabold text-gray-900">
                         <span>Total Paid Amount:</span>
-                        <span className="text-[#2874f0] text-base">₹{order.totalAmount}</span>
+                        <span className="text-emerald-800 text-base">₹{order.totalAmount}</span>
                       </div>
                       {order.savings > 0 && (
                         <p className="text-[11px] text-right text-emerald-600 font-bold">
@@ -733,7 +733,7 @@ export default function AdminPanel({
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-4 mb-6">
               <div>
                 <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Upload className="h-5 w-5 text-[#2874f0]" />
+                  <Upload className="h-5 w-5 text-emerald-800" />
                   Smart Bulk Image Uploader
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">
@@ -744,7 +744,7 @@ export default function AdminPanel({
                 <div className="flex gap-2">
                   <button
                     onClick={() => bulkFileRef.current?.click()}
-                    className="px-3.5 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-xs rounded border border-blue-200 transition flex items-center gap-1.5"
+                    className="px-3.5 py-1.5 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-bold text-xs rounded border border-emerald-200 transition flex items-center gap-1.5"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Add More
@@ -780,10 +780,10 @@ export default function AdminPanel({
             {bulkItems.length === 0 ? (
               <div
                 onClick={() => bulkFileRef.current?.click()}
-                className="border-2 border-dashed border-gray-300 hover:border-[#2874f0] rounded-xl p-12 bg-gray-50 hover:bg-blue-50/30 transition cursor-pointer flex flex-col items-center justify-center text-center group"
+                className="border-2 border-dashed border-gray-300 hover:border-emerald-750 rounded-xl p-12 bg-gray-50 hover:bg-emerald-50/30 transition cursor-pointer flex flex-col items-center justify-center text-center group"
               >
                 <div className="w-16 h-16 bg-white rounded-full border border-gray-200 flex items-center justify-center shadow-md text-gray-400 group-hover:scale-110 transition duration-300 mb-4">
-                  <Upload className="h-8 w-8 text-[#2874f0]" />
+                  <Upload className="h-8 w-8 text-emerald-800" />
                 </div>
                 <h4 className="text-base font-extrabold text-gray-800 mb-1">
                   Drag & drop multiple product images here
@@ -811,18 +811,18 @@ export default function AdminPanel({
                 
                 {/* Upload Status Header / Progress Bar */}
                 {bulkUploadStatus === 'processing' && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-blue-800">
+                      <span className="text-xs font-bold text-emerald-800">
                         Processing image uploads: {bulkUploadProgress.current} of {bulkUploadProgress.total} items
                       </span>
-                      <span className="text-xs font-black text-blue-900">
+                      <span className="text-xs font-black text-emerald-900">
                         {Math.round((bulkUploadProgress.current / bulkUploadProgress.total) * 100)}%
                       </span>
                     </div>
-                    <div className="w-full bg-blue-100 rounded-full h-2.5 overflow-hidden">
+                    <div className="w-full bg-emerald-100 rounded-full h-2.5 overflow-hidden">
                       <div 
-                        className="bg-[#2874f0] h-2.5 rounded-full transition-all duration-300"
+                        className="bg-emerald-850 h-2.5 rounded-full transition-all duration-300"
                         style={{ width: `${(bulkUploadProgress.current / bulkUploadProgress.total) * 100}%` }}
                       />
                     </div>
@@ -870,7 +870,7 @@ export default function AdminPanel({
                                 </span>
                               )}
                               {item.status === 'uploading' && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full animate-pulse">
+                                <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full animate-pulse">
                                   Uploading...
                                 </span>
                               )}
@@ -896,7 +896,7 @@ export default function AdminPanel({
                                   onClick={() => handleUpdateBulkItem(item.id, { selectedProductId: 'new' })}
                                   className={`px-3 py-1 text-xs font-bold rounded transition border ${
                                     isNew 
-                                      ? 'bg-orange-50 text-[#fb641b] border-orange-200' 
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200 font-bold border-2' 
                                       : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                                   }`}
                                 >
@@ -911,7 +911,7 @@ export default function AdminPanel({
                                   }}
                                   className={`px-3 py-1 text-xs font-bold rounded transition border ${
                                     !isNew 
-                                      ? 'bg-blue-50 text-[#2874f0] border-blue-200' 
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200 font-bold border-2' 
                                       : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                                   }`}
                                 >
@@ -1001,7 +1001,7 @@ export default function AdminPanel({
                                         });
                                       }
                                     }}
-                                    className="w-full px-3 py-2 border border-gray-200 bg-white rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-bold"
+                                    className="w-full px-3 py-2 border border-gray-200 bg-white rounded text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none font-bold"
                                   >
                                     <option value="">-- Choose an item from your catalog --</option>
                                     {[...products].sort((a, b) => a.name.localeCompare(b.name)).map(prod => (
@@ -1072,7 +1072,7 @@ export default function AdminPanel({
                       type="button"
                       disabled={bulkUploadStatus === 'processing' || bulkItems.filter(i => i.status === 'pending').length === 0}
                       onClick={handleStartBulkUpload}
-                      className="flex-1 sm:flex-none px-8 py-2.5 bg-[#fb641b] hover:bg-[#e15310] disabled:opacity-50 text-white text-xs font-black rounded-lg shadow-md transition flex items-center justify-center gap-2"
+                      className="flex-1 sm:flex-none px-8 py-2.5 bg-emerald-800 hover:bg-emerald-950 disabled:opacity-50 text-white text-xs font-black rounded-lg shadow-md transition flex items-center justify-center gap-2"
                     >
                       {bulkUploadStatus === 'processing' ? (
                         <>
@@ -1102,7 +1102,7 @@ export default function AdminPanel({
           <div className="w-full max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-gray-800 animate-in fade-in zoom-in-95 duration-150">
             
             {/* Modal Header */}
-            <div className="bg-[#2874f0] text-white px-6 py-4 flex items-center justify-between">
+            <div className="bg-emerald-800 text-white px-6 py-4 flex items-center justify-between">
               <h3 className="text-base font-bold flex items-center gap-2">
                 <Box className="h-5 w-5 text-yellow-400" />
                 <span>{editingProduct ? `Edit Item: ${editingProduct.name}` : 'Add New Grocery Product'}</span>
@@ -1136,7 +1136,7 @@ export default function AdminPanel({
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">Store Category *</label>
                   <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium"
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white font-medium"
                     value={formData.category}
                     onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                   >
@@ -1153,7 +1153,7 @@ export default function AdminPanel({
                     type="text"
                     required
                     placeholder="e.g. 1 kg, 500 ml, Pack of 4"
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                     value={formData.unit}
                     onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
                   />
@@ -1180,7 +1180,7 @@ export default function AdminPanel({
                     type="number"
                     min={0}
                     placeholder="e.g. 55"
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-semibold text-gray-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none font-semibold text-gray-500"
                     value={formData.originalPrice}
                     onChange={(e) => setFormData(prev => ({ ...prev, originalPrice: e.target.value }))}
                   />
@@ -1194,7 +1194,7 @@ export default function AdminPanel({
                     required
                     min={0}
                     placeholder="e.g. 100"
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono"
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono"
                     value={formData.stock}
                     onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
                   />
@@ -1265,7 +1265,7 @@ export default function AdminPanel({
                   onClick={() => fileInputRef.current?.click()}
                   className="bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-xs font-bold py-1.5 px-4 rounded shadow flex items-center gap-1 transition"
                 >
-                  <Upload className="h-3.5 w-3.5 text-[#2874f0]" />
+                  <Upload className="h-3.5 w-3.5 text-emerald-800" />
                   <span>Choose Image File</span>
                 </button>
                 <p className="text-[10px] text-gray-400 mt-1.5 text-center">
@@ -1291,7 +1291,7 @@ export default function AdminPanel({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 text-sm font-extrabold text-white bg-[#fb641b] hover:bg-[#e15310] rounded shadow transition"
+                  className="flex-1 py-2.5 text-sm font-extrabold text-white bg-emerald-800 hover:bg-emerald-950 rounded shadow transition"
                 >
                   {editingProduct ? 'UPDATE GROCERY' : 'ADD PRODUCT'}
                 </button>

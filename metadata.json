@@ -1,6 +1,6 @@
 {
-  "name": "Whole Foods Market",
+  "name": "Bari' All-In-One Mart",
   "description": "An e-commerce storefront like Flipkart for local grocery shops. Supports inventory management, order tracking, search, cart operations, and image upload.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera", "microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

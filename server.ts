@@ -3,18 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { 
-  getFirestore, 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  writeBatch 
-} from 'firebase/firestore';
+import { GoogleGenAI } from '@google/genai';
 import { ALL_PRODUCTS } from './src/data/allProducts.js';
 
 const isESM = typeof import.meta !== 'undefined' && typeof import.meta.url !== 'undefined';
@@ -28,356 +17,20 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Load configuration from firebase-applet-config.json
-const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
-const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-
-const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
-
-// Initial default products list
-const defaultProducts = [
-  {
-    id: 'prod-1',
-    name: 'Fresh Farm Tomatoes',
-    category: 'Fruits & Vegetables',
-    price: 40,
-    originalPrice: 50,
-    unit: '1 kg',
-    stock: 120,
-    image: 'tomato-placeholder',
-    description: 'Farm-fresh, juicy red tomatoes. Ideal for salads, curries, and soups.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-2',
-    name: 'Organic Potatoes',
-    category: 'Fruits & Vegetables',
-    price: 25,
-    originalPrice: 30,
-    unit: '1 kg',
-    stock: 150,
-    image: 'potato-placeholder',
-    description: 'Fresh organic potatoes directly sourced from local farms.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-3',
-    name: 'Fresh Red Onions',
-    category: 'Fruits & Vegetables',
-    price: 35,
-    originalPrice: 45,
-    unit: '1 kg',
-    stock: 140,
-    image: 'onion-placeholder',
-    description: 'Sharp and flavor-rich red onions, essential for every kitchen.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-4',
-    name: 'Sweet Bananas (Dozen)',
-    category: 'Fruits & Vegetables',
-    price: 50,
-    originalPrice: 60,
-    unit: '1 Dozen',
-    stock: 45,
-    image: 'banana-placeholder',
-    description: 'Perfectly ripe, sweet, and energy-packed bananas.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-5',
-    name: 'Premium Red Apples',
-    category: 'Fruits & Vegetables',
-    price: 140,
-    originalPrice: 180,
-    unit: '1 kg',
-    stock: 60,
-    image: 'apple-placeholder',
-    description: 'Crisp, sweet, and delicious high-quality red apples.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-6',
-    name: 'Fresh Pasteurised Milk',
-    category: 'Dairy & Eggs',
-    price: 62,
-    originalPrice: 66,
-    unit: '1 Litre',
-    stock: 80,
-    image: 'milk-placeholder',
-    description: 'Full cream pasteurised fresh milk, rich in nutrients.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-7',
-    name: 'Premium Salted Butter',
-    category: 'Dairy & Eggs',
-    price: 55,
-    originalPrice: 58,
-    unit: '100 g',
-    stock: 90,
-    image: 'butter-placeholder',
-    description: 'Rich, creamy salted butter. Perfect spread for your morning toast.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-8',
-    name: 'Fresh Cottage Cheese (Paneer)',
-    category: 'Dairy & Eggs',
-    price: 85,
-    originalPrice: 95,
-    unit: '200 g',
-    stock: 70,
-    image: 'paneer-placeholder',
-    description: 'Soft, fresh, and high-protein cottage cheese (Paneer).',
-    isAvailable: true
-  },
-  {
-    id: 'prod-9',
-    name: 'Farm Fresh Eggs',
-    category: 'Dairy & Eggs',
-    price: 45,
-    originalPrice: 50,
-    unit: '6 Pieces',
-    stock: 100,
-    image: 'eggs-placeholder',
-    description: 'Healthy, clean, protein-rich farm-fresh white eggs.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-10',
-    name: 'Premium Basmati Rice',
-    category: 'Pantry & Staples',
-    price: 110,
-    originalPrice: 130,
-    unit: '1 kg',
-    stock: 200,
-    image: 'rice-placeholder',
-    description: 'Long-grain, aromatic aged basmati rice for royal meals.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-11',
-    name: 'Chakki Fresh Atta',
-    category: 'Pantry & Staples',
-    price: 210,
-    originalPrice: 240,
-    unit: '5 kg',
-    stock: 110,
-    image: 'atta-placeholder',
-    description: '100% pure stone-ground whole wheat flour for soft rotis.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-12',
-    name: 'Refined White Sugar',
-    category: 'Pantry & Staples',
-    price: 44,
-    originalPrice: 48,
-    unit: '1 kg',
-    stock: 180,
-    image: 'sugar-placeholder',
-    description: 'Pure, sulfur-free white sugar crystals.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-13',
-    name: 'Refined Sunflower Oil',
-    category: 'Pantry & Staples',
-    price: 135,
-    originalPrice: 160,
-    unit: '1 Litre',
-    stock: 95,
-    image: 'oil-placeholder',
-    description: 'Healthy, light refined sunflower oil. Ideal for daily cooking.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-14',
-    name: 'Split Toor Dal / Arhar Dal',
-    category: 'Pantry & Staples',
-    price: 145,
-    originalPrice: 165,
-    unit: '1 kg',
-    stock: 150,
-    image: 'dal-placeholder',
-    description: 'Unpolished split pigeon peas (Toor dal), packed with protein.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-15',
-    name: 'Soft White Bread',
-    category: 'Bakery & Bread',
-    price: 30,
-    originalPrice: 35,
-    unit: '400 g',
-    stock: 50,
-    image: 'bread-placeholder',
-    description: 'Freshly baked, soft slices of premium sandwich bread.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-16',
-    name: 'Choco Chip Cookies',
-    category: 'Bakery & Bread',
-    price: 40,
-    originalPrice: 50,
-    unit: '150 g',
-    stock: 80,
-    image: 'cookies-placeholder',
-    description: 'Crunchy cookies loaded with delicious dark chocolate chips.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-17',
-    name: 'Premium Assam Masala Tea',
-    category: 'Beverages',
-    price: 95,
-    originalPrice: 110,
-    unit: '250 g',
-    stock: 120,
-    image: 'tea-placeholder',
-    description: 'Strong, aromatic CTC tea blended with traditional spices.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-18',
-    name: 'Pure Instant Coffee',
-    category: 'Beverages',
-    price: 175,
-    originalPrice: 195,
-    unit: '100 g',
-    stock: 75,
-    image: 'coffee-placeholder',
-    description: '100% pure soluble coffee powder with a rich, bold aroma.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-19',
-    name: 'Crunchy Potato Chips',
-    category: 'Snacks & Sweets',
-    price: 20,
-    originalPrice: 25,
-    unit: '100 g',
-    stock: 200,
-    image: 'chips-placeholder',
-    description: 'Thinly sliced crispy salted potato chips, the perfect snack.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-20',
-    name: 'Premium Milk Chocolate Bar',
-    category: 'Snacks & Sweets',
-    price: 70,
-    originalPrice: 80,
-    unit: '80 g',
-    stock: 150,
-    image: 'chocolate-placeholder',
-    description: 'Silky smooth, rich milk chocolate that melts in your mouth.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-21',
-    name: 'Active Gel Dishwash Liquid',
-    category: 'Household Supplies',
-    price: 99,
-    originalPrice: 115,
-    unit: '500 ml',
-    stock: 85,
-    image: 'dishwash-placeholder',
-    description: 'Cuts through tough grease instantly, leaving dishes sparkling clean.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-22',
-    name: 'Premium Laundry Detergent',
-    category: 'Household Supplies',
-    price: 149,
-    originalPrice: 175,
-    unit: '1 kg',
-    stock: 90,
-    image: 'detergent-placeholder',
-    description: 'Advanced dirt-removal powder formula that keeps clothes bright.',
-    isAvailable: true
-  },
-  {
-    id: 'prod-23',
-    name: 'Gentle Liquid Hand Wash',
-    category: 'Personal Care',
-    price: 79,
-    originalPrice: 95,
-    unit: '250 ml',
-    stock: 110,
-    image: 'handwash-placeholder',
-    description: 'Antibacterial hand wash with moisturizers for soft, clean hands.',
-    isAvailable: true
-  }
-];
-
-// Initialize and sync Firestore database
-async function initializeDatabase() {
-  try {
-    const productsRef = collection(db, 'products');
-    const snapshot = await getDocs(productsRef);
-    if (snapshot.size !== ALL_PRODUCTS.length) {
-      console.log(`Firestore products collection has old data (${snapshot.size} items) or is empty. Re-seeding with updated ${ALL_PRODUCTS.length} premium products...`);
-      
-      // Delete old products in batches
-      if (!snapshot.empty) {
-        const deleteBatch = writeBatch(db);
-        snapshot.docs.forEach(doc => {
-          deleteBatch.delete(doc.ref);
-        });
-        await deleteBatch.commit();
-        console.log('Old catalog cleared successfully.');
-      }
-      
-      // Seed ALL_PRODUCTS in chunks of 100 to stay under Firestore batch limit of 500
-      const batches = [];
-      let currentBatch = writeBatch(db);
-      let opCount = 0;
-      
-      for (const prod of ALL_PRODUCTS) {
-        const docRef = doc(db, 'products', prod.id);
-        currentBatch.set(docRef, prod);
-        opCount++;
-        if (opCount === 100) {
-          batches.push(currentBatch.commit());
-          currentBatch = writeBatch(db);
-          opCount = 0;
-        }
-      }
-      if (opCount > 0) {
-        batches.push(currentBatch.commit());
-      }
-      
-      await Promise.all(batches);
-      console.log(`${ALL_PRODUCTS.length} updated premium products seeded successfully!`);
-    } else {
-      console.log(`Firestore products collection already has ${ALL_PRODUCTS.length} updated items. Skipping seed.`);
-    }
-  } catch (error) {
-    console.error('Error initializing database:', error);
-  }
-}
+// In-Memory Database State
+let productsList = [...ALL_PRODUCTS];
+let ordersList: any[] = [];
+let customersList: any[] = [];
 
 /* -------------------------------------------
-   API Endpoints
+   API Endpoints (Fully Local / In-Memory)
    ------------------------------------------- */
 
 // 1. Get products (with filtering, searching, and admin controls)
-app.get('/api/products', async (req, res) => {
+app.get('/api/products', (req, res) => {
   try {
     const { category, search, admin } = req.query;
-    const productsRef = collection(db, 'products');
-    const snapshot = await getDocs(productsRef);
     
-    let productsList: any[] = [];
-    snapshot.forEach((doc) => {
-      productsList.push(doc.data());
-    });
-
     let filtered = [...productsList];
 
     // If search query is provided
@@ -402,13 +55,13 @@ app.get('/api/products', async (req, res) => {
 
     res.json(filtered);
   } catch (err: any) {
-    console.error('Error fetching products from Firestore:', err);
+    console.error('Error fetching products:', err);
     res.status(500).json({ error: err.message || 'Connecting to store catalog failed.' });
   }
 });
 
 // 2. Add product (Admin only)
-app.post('/api/products', async (req, res) => {
+app.post('/api/products', (req, res) => {
   try {
     const { name, category, price, originalPrice, unit, stock, image, description, isAvailable } = req.body;
 
@@ -430,326 +83,236 @@ app.post('/api/products', async (req, res) => {
       isAvailable: isAvailable !== undefined ? Boolean(isAvailable) : true
     };
 
-    const docRef = doc(db, 'products', id);
-    await setDoc(docRef, newProduct);
+    productsList.unshift(newProduct);
     res.status(201).json(newProduct);
   } catch (err: any) {
-    console.error('Error adding product to Firestore:', err);
+    console.error('Error adding product:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
 // 3. Update product (Admin only)
-app.put('/api/products/:id', async (req, res) => {
+app.put('/api/products/:id', (req, res) => {
   try {
     const { id } = req.params;
     const { name, category, price, originalPrice, unit, stock, image, description, isAvailable } = req.body;
 
-    const docRef = doc(db, 'products', id);
-    const docSnap = await getDoc(docRef);
-
-    if (!docSnap.exists()) {
+    const productIndex = productsList.findIndex(p => p.id === id);
+    if (productIndex === -1) {
       return res.status(404).json({ error: 'Product not found.' });
     }
 
-    const currentData = docSnap.data();
-    if (!currentData) {
-      return res.status(404).json({ error: 'Product data is missing.' });
-    }
-
+    const existing = productsList[productIndex];
     const updatedProduct = {
-      ...currentData,
-      name: name !== undefined ? name : currentData.name,
-      category: category !== undefined ? category : currentData.category,
-      price: price !== undefined ? Number(price) : currentData.price,
-      originalPrice: originalPrice !== undefined ? Number(originalPrice) : currentData.originalPrice,
-      unit: unit !== undefined ? unit : currentData.unit,
-      stock: stock !== undefined ? Number(stock) : currentData.stock,
-      image: image !== undefined ? image : currentData.image,
-      description: description !== undefined ? description : currentData.description,
-      isAvailable: isAvailable !== undefined ? Boolean(isAvailable) : currentData.isAvailable
+      ...existing,
+      name: name !== undefined ? name : existing.name,
+      category: category !== undefined ? category : existing.category,
+      price: price !== undefined ? Number(price) : existing.price,
+      originalPrice: originalPrice !== undefined ? Number(originalPrice) : existing.originalPrice,
+      unit: unit !== undefined ? unit : existing.unit,
+      stock: stock !== undefined ? Number(stock) : existing.stock,
+      image: image !== undefined ? image : existing.image,
+      description: description !== undefined ? description : existing.description,
+      isAvailable: isAvailable !== undefined ? Boolean(isAvailable) : existing.isAvailable
     };
 
-    await setDoc(docRef, updatedProduct);
+    productsList[productIndex] = updatedProduct;
     res.json(updatedProduct);
   } catch (err: any) {
-    console.error('Error updating product in Firestore:', err);
+    console.error('Error updating product:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
 // 4. Delete product (Admin only)
-app.delete('/api/products/:id', async (req, res) => {
+app.delete('/api/products/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const docRef = doc(db, 'products', id);
-    const docSnap = await getDoc(docRef);
+    const initialLength = productsList.length;
+    productsList = productsList.filter(p => p.id !== id);
 
-    if (!docSnap.exists()) {
+    if (productsList.length === initialLength) {
       return res.status(404).json({ error: 'Product not found.' });
     }
 
-    await deleteDoc(docRef);
-    res.json({ message: 'Product deleted successfully', id });
+    res.json({ success: true, message: 'Product deleted from local listing successfully.' });
   } catch (err: any) {
-    console.error('Error deleting product from Firestore:', err);
+    console.error('Error deleting product:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// 5. Get orders (Admin/User list)
-app.get('/api/orders', async (req, res) => {
+// 5. Get all orders (Admin console view log)
+app.get('/api/orders', (req, res) => {
   try {
-    const ordersRef = collection(db, 'orders');
-    const snapshot = await getDocs(ordersRef);
-    let ordersList: any[] = [];
-    snapshot.forEach((doc) => {
-      ordersList.push(doc.data());
-    });
-
-    // Sort by createdAt descending
-    ordersList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
     res.json(ordersList);
   } catch (err: any) {
-    console.error('Error fetching orders from Firestore:', err);
+    console.error('Error fetching orders:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// 5b. Get orders for specific customer by phone number
-app.get('/api/orders/customer/:phone', async (req, res) => {
-  try {
-    const { phone } = req.params;
-    if (!phone) {
-      return res.status(400).json({ error: 'Customer phone number is required' });
-    }
-    const ordersRef = collection(db, 'orders');
-    const snapshot = await getDocs(ordersRef);
-    let ordersList: any[] = [];
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data && data.customerPhone === phone) {
-        ordersList.push(data);
-      }
-    });
-
-    // Sort by createdAt descending
-    ordersList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-    res.json(ordersList);
-  } catch (err: any) {
-    console.error('Error fetching customer orders from Firestore:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 6. Place order
-app.post('/api/orders', async (req, res) => {
+// 6. Submit a new order & deduct stock
+app.post('/api/orders', (req, res) => {
   try {
     const { customerName, customerPhone, customerAddress, deliveryType, items } = req.body;
 
-    if (!customerName || !customerPhone || !items || !items.length) {
-      return res.status(400).json({ error: 'Customer name, phone, and items are required.' });
+    if (!customerName || !customerPhone || !customerAddress || !items || items.length === 0) {
+      return res.status(400).json({ error: 'Missing mandatory shipping information.' });
     }
 
+    // Double check stock and construct order item details
+    const finalizedItems: any[] = [];
     let totalAmount = 0;
     let savings = 0;
-    const orderItems: any[] = [];
-
-    // Process and update stock
-    const batch = writeBatch(db);
 
     for (const item of items) {
-      const productRef = doc(db, 'products', item.product.id);
-      const productSnap = await getDoc(productRef);
-
-      if (!productSnap.exists()) {
-        return res.status(400).json({ error: `Product ${item.product.name} no longer exists.` });
+      const dbProduct = productsList.find(p => p.id === item.product.id);
+      if (!dbProduct) {
+        return res.status(400).json({ error: `Product ${item.product.name} is no longer in the store catalog.` });
       }
 
-      const product = productSnap.data();
-      if (!product) {
-        return res.status(400).json({ error: `Product data for ${item.product.name} is missing.` });
+      if (dbProduct.stock < item.quantity) {
+        return res.status(400).json({ error: `Not enough stock for ${dbProduct.name}. Only ${dbProduct.stock} units available.` });
       }
 
-      if (product.stock < item.quantity) {
-        return res.status(400).json({ error: `Insufficient stock for ${product.name}. Available: ${product.stock}` });
-      }
+      // Deduct stock in-memory
+      dbProduct.stock = Math.max(0, dbProduct.stock - item.quantity);
 
-      // Deduct stock
-      batch.update(productRef, { stock: product.stock - item.quantity });
-      
-      const itemTotal = product.price * item.quantity;
-      totalAmount += itemTotal;
-      savings = 0;
+      const itemCost = dbProduct.price * item.quantity;
+      const itemOriginalCost = (dbProduct.originalPrice || dbProduct.price) * item.quantity;
+      totalAmount += itemCost;
+      savings += (itemOriginalCost - itemCost);
 
-      orderItems.push({
-        id: product.id,
-        name: product.name,
-        unit: product.unit,
-        price: product.price,
+      finalizedItems.push({
+        id: dbProduct.id,
+        name: dbProduct.name,
+        unit: dbProduct.unit,
+        price: dbProduct.price,
         quantity: item.quantity,
-        image: product.image
+        image: dbProduct.image
       });
     }
 
-    // Create new order
-    const orderId = 'ord-' + Math.floor(100000 + Math.random() * 900000);
+    const orderId = 'order-' + Date.now();
     const newOrder = {
       id: orderId,
       customerName,
       customerPhone,
-      customerAddress: customerAddress || 'Store Pickup',
+      customerAddress,
       deliveryType,
-      items: orderItems,
+      items: finalizedItems,
       totalAmount,
       savings,
       status: 'Pending',
       createdAt: new Date().toISOString()
     };
 
-    const orderRef = doc(db, 'orders', orderId);
-    batch.set(orderRef, newOrder);
-
-    // Commit stock changes and order creation together atomically!
-    await batch.commit();
-
+    ordersList.unshift(newOrder);
     res.status(201).json(newOrder);
   } catch (err: any) {
-    console.error('Error placing order in Firestore:', err);
+    console.error('Error placing order:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// --- Customer Authentication API Endpoints ---
+// 7. Get orders for specific customer by phone number
+app.get('/api/orders/customer/:phone', (req, res) => {
+  try {
+    const { phone } = req.params;
+    const customerOrders = ordersList.filter(o => o.customerPhone === phone);
+    res.json(customerOrders);
+  } catch (err: any) {
+    console.error('Error retrieving customer orders:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
-// In-memory OTP store (temporary for verification)
-const customerOtps = new Map<string, string>();
-
-// 1. Initial register (Generates simulation OTP)
-app.post('/api/customers/register', async (req, res) => {
+// 8. Register customer (Generate temporary OTP)
+app.post('/api/customers/register', (req, res) => {
   try {
     const { email, fullName } = req.body;
-    if (!email || !fullName) {
-      return res.status(400).json({ error: 'Email and Full Name are required.' });
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required to verify account.' });
     }
 
-    const emailKey = email.trim().toLowerCase();
+    // Generate random 4 digit code
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    console.log(`[SIMULATED REGISTRATION OTP] Email: ${email}, OTP: ${otp}`);
     
-    // Check if customer already exists in Firestore
-    const customerRef = doc(db, 'customers', emailKey);
-    const customerSnap = await getDoc(customerRef);
-
-    if (customerSnap.exists()) {
-      return res.status(400).json({ error: 'An account with this email address already exists. Please sign in instead.' });
-    }
-
-    // Generate a 4-digit code
-    const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
-    customerOtps.set(emailKey, otpCode);
-
-    console.log(`Generated OTP code ${otpCode} for registration of ${fullName} (${email})`);
-    res.json({ success: true, otp: otpCode });
+    res.json({ success: true, otp });
   } catch (err: any) {
-    console.error('Error in customer register endpoint:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// 2. Code Verification & Account Creation
-app.post('/api/customers/verify', async (req, res) => {
+// 9. Verify OTP & Create account
+app.post('/api/customers/verify', (req, res) => {
   try {
     const { fullName, email, password, phone, shippingAddress, city, pincode, code } = req.body;
 
-    if (!email || !fullName || !password || !phone || !shippingAddress || !city || !pincode || !code) {
-      return res.status(400).json({ error: 'All profile and verification details are required.' });
+    if (!email || !fullName || !phone || !pincode) {
+      return res.status(400).json({ error: 'Missing account registration details.' });
     }
 
-    const emailKey = email.trim().toLowerCase();
-    const storedOtp = customerOtps.get(emailKey);
-
-    if (!storedOtp || storedOtp !== code.trim()) {
-      return res.status(400).json({ error: 'Invalid or expired verification code.' });
+    // Check if user already exists
+    const existing = customersList.find(c => c.email.toLowerCase() === email.toLowerCase());
+    if (existing) {
+      return res.status(400).json({ error: 'An account with this email already exists.' });
     }
 
-    // Remove OTP from temporary store
-    customerOtps.delete(emailKey);
-
-    // Save customer record to Firestore
-    const customerRef = doc(db, 'customers', emailKey);
     const newCustomer = {
-      id: emailKey,
-      fullName: fullName.trim(),
-      email: emailKey,
-      password: password, // Simple password check demonstration
-      phone: phone.trim(),
-      shippingAddress: shippingAddress.trim(),
-      city: city.trim(),
-      pincode: pincode.trim(),
+      id: 'cust-' + Date.now(),
+      fullName,
+      email,
+      password, // In memory plain text for simple validation
+      phone,
+      shippingAddress,
+      city,
+      pincode,
       isVerified: true,
       createdAt: new Date().toISOString()
     };
 
-    await setDoc(customerRef, newCustomer);
+    customersList.push(newCustomer);
     
-    // Omit password from client response
-    const { password: _, ...customerResponse } = newCustomer;
-    res.status(201).json({ success: true, customer: customerResponse });
+    // Omit password from output
+    const { password: _, ...responseCustomer } = newCustomer;
+    res.status(201).json({ success: true, customer: responseCustomer });
   } catch (err: any) {
-    console.error('Error verifying customer account:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// 3. Customer Sign In
-app.post('/api/customers/login', async (req, res) => {
+// 10. Login Customer
+app.post('/api/customers/login', (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and Password are required.' });
-    }
-
-    const emailKey = email.trim().toLowerCase();
-    const customerRef = doc(db, 'customers', emailKey);
-    const customerSnap = await getDoc(customerRef);
-
-    if (!customerSnap.exists()) {
-      return res.status(404).json({ error: 'No account found with this email. Please sign up.' });
-    }
-
-    const customer = customerSnap.data();
-    if (!customer || customer.password !== password) {
-      return res.status(401).json({ error: 'Invalid email address or password.' });
+    const customer = customersList.find(c => c.email.toLowerCase() === email.toLowerCase() && c.password === password);
+    if (!customer) {
+      return res.status(401).json({ error: 'Invalid email address or password. Please try again.' });
     }
 
     // Omit password from response
-    const { password: _, ...customerResponse } = customer as any;
+    const { password: _, ...customerResponse } = customer;
     res.json({ success: true, customer: customerResponse });
   } catch (err: any) {
-    console.error('Error logging in customer:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// 4. Update Customer Profile
-app.put('/api/customers/update', async (req, res) => {
+// 11. Update customer profile
+app.put('/api/customers/update', (req, res) => {
   try {
     const { email, fullName, phone, shippingAddress, city, pincode } = req.body;
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required to locate the user profile.' });
-    }
 
-    const emailKey = email.trim().toLowerCase();
-    const customerRef = doc(db, 'customers', emailKey);
-    const customerSnap = await getDoc(customerRef);
-
-    if (!customerSnap.exists()) {
+    const customerIndex = customersList.findIndex(c => c.email.toLowerCase() === email.toLowerCase());
+    if (customerIndex === -1) {
       return res.status(404).json({ error: 'Customer account not found.' });
     }
 
-    const currentData = customerSnap.data();
+    const currentData = customersList[customerIndex];
     const updatedCustomer = {
       ...currentData,
       fullName: fullName ? fullName.trim() : currentData.fullName,
@@ -759,86 +322,104 @@ app.put('/api/customers/update', async (req, res) => {
       pincode: pincode ? pincode.trim() : currentData.pincode,
     };
 
-    await setDoc(customerRef, updatedCustomer);
+    customersList[customerIndex] = updatedCustomer;
 
     // Omit password from response
-    const { password: _, ...customerResponse } = updatedCustomer as any;
+    const { password: _, ...customerResponse } = updatedCustomer;
     res.json({ success: true, customer: customerResponse });
   } catch (err: any) {
-    console.error('Error updating customer profile:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// 7. Update order status (Admin only)
-app.put('/api/orders/:id/status', async (req, res) => {
+// 12. Update order status (Admin only)
+app.put('/api/orders/:id/status', (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    const orderRef = doc(db, 'orders', id);
-    const orderSnap = await getDoc(orderRef);
-
-    if (!orderSnap.exists()) {
+    const orderIndex = ordersList.findIndex(o => o.id === id);
+    if (orderIndex === -1) {
       return res.status(404).json({ error: 'Order not found.' });
     }
 
-    await updateDoc(orderRef, { status });
-    const updatedSnap = await getDoc(orderRef);
-
-    res.json(updatedSnap.data());
+    ordersList[orderIndex].status = status;
+    res.json(ordersList[orderIndex]);
   } catch (err: any) {
-    console.error('Error updating order status in Firestore:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// 8. Reset catalog to defaults (Admin recovery tool)
-app.post('/api/reset', async (req, res) => {
+// 13. Reset catalog to defaults (Admin recovery tool)
+app.post('/api/reset', (req, res) => {
   try {
-    console.log('Resetting Firestore collections to default...');
-    
-    // 1. Delete all current products
-    const productsRef = collection(db, 'products');
-    const productsSnap = await getDocs(productsRef);
-    const batch1 = writeBatch(db);
-    productsSnap.forEach((doc) => {
-      batch1.delete(doc.ref);
-    });
-    await batch1.commit();
-
-    // 2. Delete all current orders
-    const ordersRef = collection(db, 'orders');
-    const ordersSnap = await getDocs(ordersRef);
-    const batch2 = writeBatch(db);
-    ordersSnap.forEach((doc) => {
-      batch2.delete(doc.ref);
-    });
-    await batch2.commit();
-
-    // 3. Re-seed default products
-    const batch3 = writeBatch(db);
-    for (const prod of defaultProducts) {
-      const docRef = doc(db, 'products', prod.id);
-      batch3.set(docRef, prod);
-    }
-    await batch3.commit();
-
-    res.json({ message: 'Catalog and orders reset to factory defaults successfully!', products: defaultProducts });
+    productsList = [...ALL_PRODUCTS];
+    ordersList = [];
+    customersList = [];
+    res.json({ message: 'Catalog and orders reset to factory defaults successfully!', products: ALL_PRODUCTS });
   } catch (err: any) {
-    console.error('Error resetting database:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// 14. Analyze image from search camera (using server-side Gemini 3.5 Flash)
+app.post('/api/analyze-image', async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) {
+      return res.status(400).json({ error: 'No image data provided.' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY is not configured in environment.' });
+    }
+
+    const ai = new GoogleGenAI({
+      apiKey: apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
+
+    let base64Data = image;
+    let mimeType = 'image/jpeg';
+    const matches = image.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      mimeType = matches[1];
+      base64Data = matches[2];
+    }
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: [
+        {
+          inlineData: {
+            mimeType: mimeType,
+            data: base64Data,
+          },
+        },
+        {
+          text: "Identify the grocery item, product, brand, or household object in this image. Respond with ONLY the single most relevant search keyword or category name (e.g., 'Apple', 'Tomato', 'Milk', 'Biscuit', 'Earphone', 'Charger', 'Bulb', 'Potato', 'Onion') in English. Keep it to 1 or 2 words max, with NO extra words, punctuation, or explanations.",
+        },
+      ],
+    });
+
+    const detectedText = response.text ? response.text.trim() : '';
+    res.json({ keyword: detectedText });
+  } catch (err: any) {
+    console.error('Error in /api/analyze-image:', err);
+    res.status(500).json({ error: err.message || 'Image analysis failed.' });
   }
 });
 
 /* -------------------------------------------
    Static Asset & Frontend Bundling Config
-------------------------------------------- */
+   ------------------------------------------- */
 
 async function startServer() {
-  // Initialize Firestore database values if needed
-  await initializeDatabase();
-
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },

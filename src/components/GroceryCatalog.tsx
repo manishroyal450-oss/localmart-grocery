@@ -1,9 +1,9 @@
 import React from 'react';
-import { ChevronRight, ArrowUpDown, Tag, Percent, Sparkles, Upload, Image as ImageIcon, Search, X, ChevronLeft } from 'lucide-react';
+import { ChevronRight, ArrowUpDown, Tag, Percent, Sparkles, Upload, Image as ImageIcon, Search, X, ChevronLeft, Camera, Loader2, Mic, MicOff } from 'lucide-react';
 import { Product, CATEGORIES, CategoryType } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import ProductPlaceholderImage from './ProductPlaceholderImage';
-import storefrontImg from '../assets/images/whole_foods_storefront_1783945953108.jpg';
+import storefrontImg from '../assets/images/bari_storefront_1784447298609.jpg';
 
 const getSerialNumber = (id: string) => {
   const match = id.match(/\d+/);
@@ -40,14 +40,223 @@ export default function GroceryCatalog({
   const [sortBy, setSortBy] = React.useState<'popular' | 'priceAsc' | 'priceDesc' | 'discount'>('popular');
   const fileInputRefs = React.useRef<{ [key: string]: HTMLInputElement | null }>({});
 
+  // Lens/Camera visual search states
+  const [isCameraOpen, setIsCameraOpen] = React.useState(false);
+  const [cameraStream, setCameraStream] = React.useState<MediaStream | null>(null);
+  const [isScanning, setIsScanning] = React.useState(false);
+  const [scanError, setScanError] = React.useState<string | null>(null);
+  
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  // Voice/Mic search states
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = React.useState(false);
+  const [isListening, setIsListening] = React.useState(false);
+  const [voiceError, setVoiceError] = React.useState<string | null>(null);
+  const [recognition, setRecognition] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (recognition) {
+        try {
+          recognition.abort();
+        } catch (e) {}
+      }
+    };
+  }, [recognition]);
+
+  const startVoiceSearch = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setVoiceError("Voice search is not supported on your current browser. Please try Google Chrome, Apple Safari, or MS Edge.");
+      return;
+    }
+
+    try {
+      if (recognition) {
+        try {
+          recognition.abort();
+        } catch (e) {}
+      }
+
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.lang = 'en-IN'; // Optimized for general/Indian English. Supports Hindi words well!
+
+      rec.onstart = () => {
+        setIsListening(true);
+        setVoiceError(null);
+      };
+
+      rec.onerror = (event: any) => {
+        console.error("Speech recognition error:", event.error);
+        if (event.error === 'not-allowed') {
+          setVoiceError("Microphone access is blocked. Browsers restrict microphone access inside sandbox iframes (like the AI Studio editor preview frame). To try voice search, click the 'Open in New Tab' button in the top-right corner of the preview panel, or type the item name directly below.");
+        } else if (event.error === 'no-speech') {
+          setVoiceError("No speech detected. Please speak clearly into your microphone.");
+        } else {
+          setVoiceError(`Error: ${event.error}. Please ensure mic is connected and try again.`);
+        }
+        setIsListening(false);
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      rec.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          const cleanTranscript = transcript.trim().replace(/\.$/, '');
+          setSearchQuery(cleanTranscript);
+          setIsVoiceModalOpen(false);
+        }
+      };
+
+      rec.start();
+      setRecognition(rec);
+    } catch (err: any) {
+      console.error("Could not start SpeechRecognition:", err);
+      setVoiceError("Failed to initiate voice recognition.");
+      setIsListening(false);
+    }
+  };
+
+  const stopVoiceSearch = () => {
+    if (recognition) {
+      try {
+        recognition.stop();
+      } catch (e) {}
+    }
+    setIsListening(false);
+  };
+
+  // Automatically start voice search when voice modal is opened
+  React.useEffect(() => {
+    if (isVoiceModalOpen) {
+      startVoiceSearch();
+    } else {
+      stopVoiceSearch();
+    }
+    return () => {
+      stopVoiceSearch();
+    };
+  }, [isVoiceModalOpen]);
+
+  // Start the video stream
+  const startCamera = async () => {
+    setScanError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+      });
+      setCameraStream(stream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(err => console.log("Video play error:", err));
+      }
+    } catch (err: any) {
+      console.error("Camera access failed:", err);
+      setScanError("Camera access permission is required to search using live camera. You can also upload a photo below.");
+    }
+  };
+
+  // Stop the video stream
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+  };
+
+  // Handle camera modal toggle
+  React.useEffect(() => {
+    if (isCameraOpen) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+    return () => {
+      stopCamera();
+    };
+  }, [isCameraOpen]);
+
+  // Analyze the base64 image data
+  const analyzeImage = async (base64Image: string) => {
+    setIsScanning(true);
+    setScanError(null);
+    try {
+      const response = await fetch('/api/analyze-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64Image })
+      });
+      const data = await response.json();
+      if (response.ok && data.keyword) {
+        setSearchQuery(data.keyword);
+        setIsCameraOpen(false);
+      } else {
+        throw new Error(data.error || "Could not detect item in image. Try another photo.");
+      }
+    } catch (err: any) {
+      console.error("Scan error:", err);
+      setScanError(err.message || "Failed to scan. Please check your internet connection and try again.");
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  // Capture a snapshot from the live video element
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth || 640;
+      canvas.height = videoRef.current.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const base64Image = canvas.toDataURL('image/jpeg', 0.85);
+        analyzeImage(base64Image);
+      }
+    } catch (err: any) {
+      console.error("Capture photo failed:", err);
+      setScanError("Failed to capture image. Try uploading a photo instead.");
+    }
+  };
+
+  // Handle local image file uploads for scanning
+  const handleCameraFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setScanError("Please select a valid image file (JPEG, PNG, WEBP).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      if (base64) {
+        analyzeImage(base64);
+      }
+    };
+    reader.onerror = () => {
+      setScanError("Failed to read image file.");
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Banner slides corresponding to user-uploaded store photos (Produce, Cheese, Wine, Bakery, Meat, etc.)
   const bannerSlides = React.useMemo(() => [
     {
       id: 1,
-      image: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=1200&h=500&q=80',
-      tag: 'WELCOME',
-      title: 'Whole Foods Market',
-      desc: 'Your premium destination for natural, organic, and delicious local groceries sourced with care.'
+      image: storefrontImg,
+      tag: 'NOW OPEN ON 2nd FLOOR',
+      title: "Bari' All-In-One Mart",
+      desc: 'Quality, Trust & Taste — All Under One Roof! Your trusted neighborhood local premium store is now open on the 2nd Floor. Explore more daily essentials, home goods, cosmetics, and toys.'
     },
     {
       id: 2,
@@ -195,6 +404,32 @@ export default function GroceryCatalog({
       
       {/* Whole Foods Storefront Hero Banner - Auto Animated Slideshow of Store Images */}
       <div className="mb-8 rounded-xl overflow-hidden relative shadow-md h-56 md:h-72 group bg-slate-950" id="store-hero-banner">
+        
+        {/* Animated Ticker / Warning Banner Bar at the top of the Hero Banner */}
+        <div className="absolute top-0 left-0 right-0 bg-red-600/90 backdrop-blur-md text-white text-[10px] md:text-xs font-bold py-2 px-4 z-20 flex items-center overflow-hidden border-b border-red-500/30 shadow-md">
+          <div className="flex items-center gap-1.5 shrink-0 bg-black/40 px-2 py-0.5 rounded text-yellow-300 mr-2 border border-red-400/25">
+            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-red-500 animate-ping" />
+            <span className="font-extrabold uppercase tracking-widest text-[8px] md:text-[9px]">Store Policy Alert</span>
+          </div>
+          
+          <div className="relative flex-1 overflow-hidden h-4">
+            <div className="animate-marquee whitespace-nowrap flex items-center gap-16 font-extrabold tracking-wide text-[11px] md:text-xs">
+              <span className="flex items-center gap-1">
+                🚫 <strong className="text-yellow-200">NO PRODUCT RETURN AFTER SALE</strong> — Please inspect and verify your items carefully before leaving the counter. Thank you!
+              </span>
+              <span className="flex items-center gap-1 text-teal-100">
+                📢 <strong className="text-yellow-200">बिक्री के बाद कोई सामान वापस नहीं होगा</strong> — कृपया जाने से पहले सामान की अच्छी तरह जांच कर लें। धन्यवाद!
+              </span>
+              <span className="flex items-center gap-1">
+                🚫 <strong className="text-yellow-200">NO PRODUCT RETURN AFTER SALE</strong> — Please inspect and verify your items carefully before leaving the counter. Thank you!
+              </span>
+              <span className="flex items-center gap-1 text-teal-100">
+                📢 <strong className="text-yellow-200">बिक्री के बाद कोई सामान वापस नहीं होगा</strong> — कृपया जाने से पहले सामान की अच्छी तरह जांच कर लें। धन्यवाद!
+              </span>
+            </div>
+          </div>
+        </div>
+
         <AnimatePresence mode="wait">
           <motion.div
             key={currentSlide}
@@ -222,7 +457,7 @@ export default function GroceryCatalog({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.4 }}
-              className="bg-[#2874f0] text-white text-[10px] font-black px-2.5 py-1 rounded tracking-wider uppercase inline-block mb-2"
+              className="bg-emerald-700 text-white text-[10px] font-black px-2.5 py-1 rounded tracking-wider uppercase inline-block mb-2"
             >
               {bannerSlides[currentSlide].tag}
             </motion.span>
@@ -282,8 +517,8 @@ export default function GroceryCatalog({
       <div className="max-w-2xl mx-auto mb-10 mt-2 text-center" id="google-search-section">
         {/* Brand subtitle matching Google Search Home */}
         <div className="flex items-center justify-center gap-2 mb-4 select-none">
-          <span className="text-3xl md:text-4xl font-extrabold tracking-tight font-sans italic bg-gradient-to-r from-[#2874f0] via-yellow-500 to-[#25D366] bg-clip-text text-transparent">
-            Whole Foods Market
+          <span className="text-3xl md:text-4xl font-extrabold tracking-tight font-sans italic bg-gradient-to-r from-emerald-800 via-emerald-600 to-yellow-500 bg-clip-text text-transparent">
+            Bari' All-In-One Mart
           </span>
           <span className="text-xs bg-yellow-100 text-yellow-800 font-black px-3 py-0.5 rounded-full font-mono uppercase tracking-wider">
             Premium
@@ -293,7 +528,7 @@ export default function GroceryCatalog({
         {/* Rounded-full iconic search box container */}
         <div className="relative group max-w-xl mx-auto">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400 group-focus-within:text-[#2874f0] transition-colors" />
+            <Search className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-700 transition-colors" />
           </div>
           
           <input
@@ -301,7 +536,7 @@ export default function GroceryCatalog({
             placeholder="Search catalog for fresh apples, local dairy, bread..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-24 py-3 bg-white border border-gray-200 rounded-full shadow-sm hover:shadow-md focus:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-100/50 focus:border-[#2874f0] text-sm text-gray-800 transition-all font-medium"
+            className="w-full pl-12 pr-24 py-3 bg-white border border-gray-200 rounded-full shadow-sm hover:shadow-md focus:shadow-md focus:outline-none focus:ring-4 focus:ring-emerald-100/50 focus:border-emerald-700 text-sm text-gray-800 transition-all font-medium"
             id="google-search-input"
           />
 
@@ -324,9 +559,10 @@ export default function GroceryCatalog({
             <button
               type="button"
               onClick={() => {
-                alert("🎤 Voice search is active and ready. Start speaking...");
+                setVoiceError(null);
+                setIsVoiceModalOpen(true);
               }}
-              className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-gray-50 rounded-full transition"
+              className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-gray-50 rounded-full transition cursor-pointer"
               title="Search by voice"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -339,9 +575,9 @@ export default function GroceryCatalog({
             <button
               type="button"
               onClick={() => {
-                alert("📸 Image visual search is active. Choose or drop a grocery photo to search.");
+                setIsCameraOpen(true);
               }}
-              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-50 rounded-full transition"
+              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-50 rounded-full transition cursor-pointer"
               title="Search by image (Lens)"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -360,13 +596,301 @@ export default function GroceryCatalog({
               key={keyword}
               type="button"
               onClick={() => setSearchQuery(keyword)}
-              className="px-3 py-0.5 bg-white hover:bg-blue-50 hover:text-blue-600 border border-gray-200/60 rounded-full text-gray-600 transition"
+              className="px-3 py-0.5 bg-white hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200/60 rounded-full text-gray-600 transition"
             >
               {keyword}
             </button>
           ))}
         </div>
       </div>
+
+      {/* 🎤 Live Voice / Mic Search Modal */}
+      <AnimatePresence>
+        {isVoiceModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4 backdrop-blur-md"
+            id="voice-search-overlay"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col items-center p-6 text-white relative"
+              id="voice-search-modal"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => {
+                  stopVoiceSearch();
+                  setIsVoiceModalOpen(false);
+                }}
+                className="absolute top-4 right-4 p-1.5 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              {/* Title */}
+              <div className="text-center mb-5 w-full">
+                <span className="text-[9px] bg-blue-500/15 text-blue-400 border border-blue-500/30 px-2.5 py-0.5 rounded-full font-black uppercase tracking-widest">
+                  Voice Assistant
+                </span>
+                <h3 className="font-extrabold text-base tracking-tight text-white mt-1.5">
+                  Speak to Search
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">What are you looking for today?</p>
+              </div>
+
+              {/* Animated Glowing Mic Section */}
+              <div className="relative h-28 w-28 flex items-center justify-center mb-5">
+                {isListening && (
+                  <>
+                    {/* Expanding Pulse Waves */}
+                    <span className="absolute animate-ping inline-flex h-16 w-16 rounded-full bg-blue-500/30 opacity-75"></span>
+                    <span className="absolute animate-ping [animation-delay:0.5s] inline-flex h-20 w-20 rounded-full bg-teal-500/20 opacity-40"></span>
+                  </>
+                )}
+                
+                {/* Central Mic Button */}
+                <button
+                  type="button"
+                  onClick={isListening ? stopVoiceSearch : startVoiceSearch}
+                  className={`h-14 w-14 rounded-full flex items-center justify-center text-white shadow-lg border transform active:scale-95 transition cursor-pointer z-10 ${
+                    isListening 
+                      ? 'bg-gradient-to-tr from-blue-600 to-teal-500 shadow-blue-500/30 border-blue-400/20' 
+                      : 'bg-zinc-800 hover:bg-zinc-700 shadow-black border-zinc-700'
+                  }`}
+                  title={isListening ? "Stop listening" : "Start listening"}
+                >
+                  {isListening ? (
+                    <Mic className="h-7 w-7 animate-pulse" />
+                  ) : (
+                    <MicOff className="h-7 w-7 text-zinc-400" />
+                  )}
+                </button>
+
+                {/* Simulated Audio Equalizer Visualizer */}
+                {isListening && (
+                  <div className="absolute -bottom-2 flex items-end gap-1 h-5">
+                    <span className="w-1 bg-blue-500 rounded-full animate-bounce h-2.5" />
+                    <span className="w-1 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s] h-4" />
+                    <span className="w-1 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.1s] h-3.5" />
+                    <span className="w-1 bg-teal-400 rounded-full animate-bounce [animation-delay:0.3s] h-4" />
+                    <span className="w-1 bg-blue-500 rounded-full animate-bounce h-2.5" />
+                  </div>
+                )}
+              </div>
+
+              {/* Status or Search Tips */}
+              <div className="text-center px-2 w-full">
+                <p className={`text-xs font-bold tracking-wide mb-3 ${isListening ? 'text-blue-400 animate-pulse' : 'text-zinc-500'}`}>
+                  {isListening ? 'Listening... Speak now' : 'Voice connection paused'}
+                </p>
+                
+                {!voiceError && (
+                  <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-3 text-left">
+                    <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider mb-1">Try saying:</p>
+                    <div className="flex flex-col gap-1 text-[11px] text-zinc-300">
+                      <p className="flex items-center gap-1">
+                        <span className="text-blue-400 font-extrabold">“</span>Fresh Mango<span className="text-blue-400 font-extrabold">”</span>
+                      </p>
+                      <p className="flex items-center gap-1">
+                        <span className="text-teal-400 font-extrabold">“</span>Syska LED Bulb<span className="text-teal-400 font-extrabold">”</span>
+                      </p>
+                      <p className="flex items-center gap-1">
+                        <span className="text-emerald-400 font-extrabold">“</span>Mother Dairy Milk<span className="text-emerald-400 font-extrabold">”</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Error Output & Detailed Troubleshooting */}
+              {voiceError && (
+                <div className="mt-4 bg-red-950/40 border border-red-900/30 text-[11px] text-red-200 p-3.5 rounded-xl w-full text-left leading-relaxed flex flex-col gap-2">
+                  <div className="font-extrabold uppercase text-red-400 tracking-wider flex items-center gap-1">
+                    <span>⚠️ Microphone Blocked</span>
+                  </div>
+                  <p className="text-zinc-300">
+                    {voiceError}
+                  </p>
+                  <div className="bg-zinc-900/90 p-2.5 rounded-lg border border-zinc-800 text-zinc-400 text-[10px] mt-1">
+                    <p className="font-bold text-zinc-300 mb-1">💡 Sandbox Workaround:</p>
+                    <p>Click the <strong className="text-white">“Open in New Tab”</strong> button at the top-right corner of the app screen. Running the app in a new tab allows your browser to request standard microphone and camera permissions directly!</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Interactive Retry & Typing Search Fallback Option */}
+              <div className="mt-5 pt-4 border-t border-zinc-800 w-full flex flex-col gap-2">
+                {!isListening && (
+                  <button
+                    onClick={startVoiceSearch}
+                    className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-white rounded-lg transition text-center cursor-pointer"
+                  >
+                    🔄 Retry Speech Recognition
+                  </button>
+                )}
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Or type product name here..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-800 focus:border-blue-500 focus:outline-none text-xs text-white px-3 py-2 rounded-lg"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => {
+                        stopVoiceSearch();
+                        setIsVoiceModalOpen(false);
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] bg-blue-600 hover:bg-blue-500 text-white font-extrabold px-2 py-0.5 rounded transition cursor-pointer"
+                    >
+                      Done
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 📸 Real Camera Search Modal (Google Lens style) */}
+      <AnimatePresence>
+        {isCameraOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4 backdrop-blur-md"
+            id="camera-search-overlay"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col relative text-white"
+              id="camera-search-modal"
+            >
+              {/* Header */}
+              <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-red-500/10 rounded-lg text-red-400">
+                    <Camera className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm tracking-tight text-white flex items-center gap-1.5">
+                      Bari' Smart Lens <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-widest animate-pulse">Live</span>
+                    </h3>
+                    <p className="text-[10px] text-zinc-400">Point your camera at a grocery product to search</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsCameraOpen(false)}
+                  className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Camera Body / Viewport */}
+              <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
+                {cameraStream ? (
+                  <>
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover scale-x-[-1]"
+                    />
+                    {/* Futuristic Scanning Overlay Target Frame */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-56 h-36 border-2 border-dashed border-red-500/80 rounded-xl relative flex items-center justify-center">
+                        {/* Glowing Scanner Line */}
+                        <div className="absolute left-0 right-0 h-0.5 bg-red-500 shadow-[0_0_8px_#ef4444] animate-[bounce_2.5s_infinite]" />
+                        
+                        {/* Decorative Corners */}
+                        <div className="absolute -top-1.5 -left-1.5 w-4 h-4 border-t-4 border-l-4 border-red-500 rounded-tl" />
+                        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 border-t-4 border-r-4 border-red-500 rounded-tr" />
+                        <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 border-b-4 border-l-4 border-red-500 rounded-bl" />
+                        <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 border-b-4 border-r-4 border-red-500 rounded-br" />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-zinc-400 p-8 text-center">
+                    <Camera className="h-12 w-12 text-zinc-600 mb-3 animate-pulse" />
+                    <p className="text-xs font-semibold text-zinc-300">Awaiting Camera Connection...</p>
+                    <p className="text-[11px] text-zinc-500 mt-1 max-w-xs">Please allow camera permissions or upload a file directly.</p>
+                  </div>
+                )}
+
+                {/* Loading Scanner Indicator */}
+                {isScanning && (
+                  <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center text-center z-20">
+                    <Loader2 className="h-10 w-10 text-red-500 animate-spin mb-3" />
+                    <p className="text-sm font-black text-white tracking-wider uppercase animate-pulse">Analyzing Image...</p>
+                    <p className="text-xs text-zinc-400 mt-1">Gemini AI is recognizing products in your frame</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Error Feedback */}
+              {scanError && (
+                <div className="bg-red-900/30 border-y border-red-900/50 px-4 py-2.5 text-[11px] text-red-300 leading-relaxed text-center">
+                  {scanError}
+                </div>
+              )}
+
+              {/* Footer Controls */}
+              <div className="p-4 bg-zinc-950/50 border-t border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+                {/* File Upload Backup */}
+                <div>
+                  <button
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="flex items-center gap-1.5 text-xs font-bold text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 px-3.5 py-2 rounded-xl transition cursor-pointer"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload Photo
+                  </button>
+                  <input
+                    type="file"
+                    ref={cameraInputRef}
+                    accept="image/*"
+                    onChange={handleCameraFileChange}
+                    className="hidden"
+                  />
+                </div>
+
+                {/* Capture & Cancel */}
+                <div className="flex items-center gap-2">
+                  {cameraStream && (
+                    <button
+                      onClick={capturePhoto}
+                      disabled={isScanning}
+                      className="bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-lg disabled:opacity-50 cursor-pointer"
+                    >
+                      <Camera className="h-4 w-4" />
+                      Capture Photo
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setIsCameraOpen(false)}
+                    className="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 hover:text-white text-xs font-bold px-4 py-2.5 rounded-xl transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Category Icons Bar - Flipkart Grocery Style */}
       <div className="bg-white rounded-lg shadow-sm p-4 mb-6 overflow-x-auto scrollbar-none" id="categories-shortcut-bar">
@@ -380,13 +904,13 @@ export default function GroceryCatalog({
           >
             <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 ${
               selectedCategory === 'All' 
-                ? 'bg-[#2874f0] text-white ring-4 ring-blue-100 scale-105' 
-                : 'bg-gray-100 text-gray-700 hover:bg-blue-50 hover:text-[#2874f0]'
+                ? 'bg-emerald-800 text-white ring-4 ring-emerald-100 scale-105' 
+                : 'bg-gray-100 text-gray-700 hover:bg-emerald-50 hover:text-emerald-800'
             }`}>
               <Sparkles className="h-6 w-6" />
             </div>
             <span className={`text-xs font-semibold tracking-tight transition-colors ${
-              selectedCategory === 'All' ? 'text-[#2874f0] font-bold' : 'text-gray-700'
+              selectedCategory === 'All' ? 'text-emerald-800 font-bold' : 'text-gray-700'
             }`}>
               All Items
             </span>
@@ -406,6 +930,7 @@ export default function GroceryCatalog({
                 case 'Snacks & Sweets': return '🍫';
                 case 'Household Supplies': return '🧼';
                 case 'Personal Care': return '🧴';
+                case 'Electronics': return '🔌';
                 default: return '🛍️';
               }
             };
@@ -419,13 +944,13 @@ export default function GroceryCatalog({
               >
                 <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl transition-all duration-300 ${
                   isSelected 
-                    ? 'bg-[#2874f0] ring-4 ring-blue-100 scale-105' 
-                    : 'bg-gray-50 text-gray-700 hover:bg-blue-50'
+                    ? 'bg-emerald-800 ring-4 ring-emerald-100 scale-105 text-white' 
+                    : 'bg-gray-50 text-gray-700 hover:bg-emerald-50'
                 }`}>
                   {getCategoryIcon(cat)}
                 </div>
                 <span className={`text-xs font-semibold text-center tracking-tight truncate w-24 transition-colors ${
-                  isSelected ? 'text-[#2874f0] font-bold' : 'text-gray-700'
+                  isSelected ? 'text-emerald-800 font-bold' : 'text-gray-700'
                 }`}>
                   {cat}
                 </span>
@@ -482,6 +1007,97 @@ export default function GroceryCatalog({
         </div>
       )}
 
+      {/* 🏬 Premium Featured Physical Storefront Banner Card */}
+      {searchQuery === '' && (
+        <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-xl mb-8 flex flex-col md:flex-row items-stretch" id="physical-storefront-banner">
+          {/* Left Side: Storefront photo with tag overlay */}
+          <div className="relative w-full md:w-2/5 min-h-[220px] md:min-h-auto flex-shrink-0">
+            <img 
+              src={storefrontImg} 
+              alt="Bari All-In-One Mart Physical Store" 
+              className="w-full h-full object-cover object-center absolute inset-0 transition-transform duration-700 hover:scale-105"
+              referrerPolicy="no-referrer"
+            />
+            {/* Elegant dark gradient overlay to blend into content */}
+            <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-slate-950 via-slate-950/20 to-transparent" />
+            <span className="absolute top-4 left-4 bg-red-600 text-white text-[9px] font-black tracking-widest px-2.5 py-1 rounded shadow-md uppercase animate-pulse">
+              📍 Visit Physical Store
+            </span>
+          </div>
+
+          {/* Right Side: Store Details & Trust Badges */}
+          <div className="p-6 md:p-8 flex-1 flex flex-col justify-center text-white relative">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-black uppercase tracking-widest">
+                Trusted Local Partner
+              </span>
+              <span className="text-[10px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 px-2.5 py-0.5 rounded-full font-black uppercase tracking-widest">
+                Now on 2nd Floor
+              </span>
+            </div>
+
+            <h2 className="text-2xl font-black tracking-tight text-white mb-2 leading-none flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+              <span>Bari' All-In-One Mart</span>
+              <span className="text-xs font-normal text-slate-400 font-mono hidden sm:inline">|</span>
+              <span className="text-sm font-bold text-yellow-400 font-mono sm:mt-1">+91 75002 36520</span>
+            </h2>
+
+            <p className="text-xs text-slate-300 leading-relaxed max-w-xl mb-4 font-medium">
+              We are delighted to welcome you to our fully stocked double-floor grocery store! Located locally, we offer the finest range of organic groceries, household goods, daily essentials, cosmetics, home supplies, and exciting toys under one roof. 
+            </p>
+
+            {/* Grid of Storefront Trust Perks */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1.5">
+              <div className="flex items-start gap-2 text-xs">
+                <span className="text-emerald-400 font-bold">✓</span>
+                <div>
+                  <h4 className="font-bold text-slate-200">Quality, Trust & Taste</h4>
+                  <p className="text-[11px] text-slate-400 font-medium">Pure, fresh, and handpicked products only.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2 text-xs">
+                <span className="text-emerald-400 font-bold">✓</span>
+                <div>
+                  <h4 className="font-bold text-slate-200">2nd Floor Now Active</h4>
+                  <p className="text-[11px] text-slate-400 font-medium">Bigger inventory of home goods, essentials & toys.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2 text-xs">
+                <span className="text-red-400 font-bold">🚫</span>
+                <div>
+                  <h4 className="font-bold text-red-400">Strict Return Policy</h4>
+                  <p className="text-[11px] text-slate-400 font-medium">बिक्री के बाद कोई सामान वापस नहीं होगा।</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2 text-xs">
+                <span className="text-emerald-400 font-bold">📞</span>
+                <div>
+                  <h4 className="font-bold text-slate-200">Fast Local Pickups</h4>
+                  <p className="text-[11px] text-slate-400 font-medium">Order online, pick up or get delivered directly.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Support Phone & Contact Button */}
+            <div className="mt-5 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+              <div className="text-[11px] text-slate-400">
+                Opening Hours: <strong className="text-slate-200 font-medium">08:00 AM — 10:00 PM Daily</strong>
+              </div>
+              <a 
+                href="https://wa.me/917500236520" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-black text-white rounded-lg shadow transition cursor-pointer"
+              >
+                💬 Chat on WhatsApp
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filter and Sort Toolbar */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4" id="catalog-toolbar">
         <div>
@@ -493,7 +1109,7 @@ export default function GroceryCatalog({
           </h2>
           {searchQuery && (
             <p className="text-xs text-gray-500 mt-0.5">
-              Showing search results for &ldquo;<span className="font-semibold text-[#2874f0]">{searchQuery}</span>&rdquo;
+              Showing search results for &ldquo;<span className="font-semibold text-emerald-800">{searchQuery}</span>&rdquo;
             </p>
           )}
         </div>
@@ -514,7 +1130,7 @@ export default function GroceryCatalog({
                 onClick={() => setSortBy(option.id as any)}
                 className={`px-3 py-1.5 rounded text-xs font-semibold border transition ${
                   sortBy === option.id
-                    ? 'bg-blue-50 border-blue-200 text-[#2874f0]'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                     : 'bg-white border-gray-200 hover:bg-gray-50'
                 }`}
               >
@@ -539,7 +1155,7 @@ export default function GroceryCatalog({
             onClick={() => {
               setSelectedCategory('All');
             }}
-            className="mt-4 px-4 py-2 text-xs font-semibold text-white bg-[#2874f0] hover:bg-blue-600 rounded shadow"
+            className="mt-4 px-4 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-950 rounded shadow"
           >
             Clear Filters
           </button>
@@ -565,11 +1181,6 @@ export default function GroceryCatalog({
                 className="group bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-300 flex flex-col relative overflow-hidden cursor-pointer"
                 id={`product-card-${product.id}`}
               >
-
-                {/* Excel S.No. Badge */}
-                <span className="absolute top-2 right-2 z-10 bg-gray-950/80 hover:bg-gray-950 text-white text-[9px] md:text-[10px] font-black px-2 py-0.5 rounded shadow-sm font-mono tracking-tight">
-                  S.No. {getSerialNumber(product.id)}
-                </span>
 
                 {/* Stock Tag */}
                 {isOutOfStock && (
@@ -600,7 +1211,7 @@ export default function GroceryCatalog({
                         className="bg-white/95 hover:bg-white text-gray-800 text-[11px] font-bold px-2.5 py-1.5 rounded shadow flex items-center gap-1 transition"
                         title="Upload fresh photo"
                       >
-                        <Upload className="h-3.5 w-3.5 text-[#2874f0]" />
+                        <Upload className="h-3.5 w-3.5 text-emerald-800" />
                         <span>Upload Photo</span>
                       </button>
                       <span className="text-[9px] text-white/90">Click to upload photo</span>
@@ -621,20 +1232,17 @@ export default function GroceryCatalog({
                     {/* Size & Category Tag */}
                     <div className="flex items-center justify-between gap-1 mb-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] bg-[#2874f0] text-white font-black px-1.5 py-0.5 rounded font-mono shadow-sm" title={`Excel Product S.No. ${getSerialNumber(product.id)}`}>
-                          #{getSerialNumber(product.id)}
-                        </span>
-                        <span className="text-[10px] font-bold tracking-tight text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                        <span className="text-[10px] font-bold tracking-tight text-emerald-850 bg-emerald-50 border border-emerald-100/50 px-2 py-0.5 rounded">
                           {product.unit}
                         </span>
                       </div>
-                      <span className="text-[10px] text-blue-500 font-semibold truncate max-w-[100px]">
+                      <span className="text-[10px] text-emerald-700 font-semibold truncate max-w-[100px]">
                         {product.category}
                       </span>
                     </div>
 
                     {/* Product Name */}
-                    <h3 className="text-xs md:text-sm font-bold text-gray-800 line-clamp-2 leading-tight min-h-[32px] md:min-h-[40px] group-hover:text-[#2874f0] transition-colors">
+                    <h3 className="text-xs md:text-sm font-bold text-gray-800 line-clamp-2 leading-tight min-h-[32px] md:min-h-[40px] group-hover:text-emerald-800 transition-colors">
                       {product.name}
                     </h3>
 
@@ -663,14 +1271,14 @@ export default function GroceryCatalog({
                             onAddToCart(product);
                           }}
                           disabled={isOutOfStock}
-                          className="w-full bg-[#ff9f00] hover:bg-[#f39500] text-white font-extrabold text-xs md:text-sm py-1.5 px-3 rounded shadow-sm flex items-center justify-center gap-1 border border-[#ff9f00] hover:shadow-md transition active:scale-[0.98] disabled:bg-gray-200 disabled:border-gray-200 disabled:text-gray-400 disabled:shadow-none disabled:pointer-events-none"
+                          className="w-full bg-emerald-800 hover:bg-emerald-950 text-white font-extrabold text-xs md:text-sm py-1.5 px-3 rounded shadow-sm flex items-center justify-center gap-1 border border-emerald-800 hover:shadow-md transition active:scale-[0.98] disabled:bg-gray-200 disabled:border-gray-200 disabled:text-gray-400 disabled:shadow-none disabled:pointer-events-none"
                           id={`add-btn-${product.id}`}
                         >
                           <span>ADD TO CART</span>
                         </button>
                       ) : (
                         <div 
-                          className="flex items-center w-full border border-orange-400 rounded overflow-hidden" 
+                          className="flex items-center w-full border border-emerald-600 rounded overflow-hidden"  
                           id={`qty-counter-${product.id}`}
                           onClick={(e) => e.stopPropagation()}
                         >
@@ -679,12 +1287,12 @@ export default function GroceryCatalog({
                               e.stopPropagation();
                               onRemoveFromCart(product);
                             }}
-                            className="bg-orange-50 hover:bg-orange-100 text-orange-600 font-extrabold px-3 py-1.5 text-xs md:text-sm flex-1 text-center select-none active:bg-orange-200 transition"
+                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold px-3 py-1.5 text-xs md:text-sm flex-1 text-center select-none active:bg-emerald-200 transition"
                             id={`qty-minus-${product.id}`}
                           >
                             &minus;
                           </button>
-                          <span className="text-xs md:text-sm font-extrabold text-orange-700 bg-white px-2 py-1.5 flex-1 text-center select-none">
+                          <span className="text-xs md:text-sm font-extrabold text-emerald-800 bg-white px-2 py-1.5 flex-1 text-center select-none">
                             {quantity}
                           </span>
                           <button
@@ -693,7 +1301,7 @@ export default function GroceryCatalog({
                               onAddToCart(product);
                             }}
                             disabled={quantity >= product.stock}
-                            className="bg-orange-50 hover:bg-orange-100 text-orange-600 font-extrabold px-3 py-1.5 text-xs md:text-sm flex-1 text-center select-none active:bg-orange-200 transition disabled:opacity-50 disabled:pointer-events-none"
+                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold px-3 py-1.5 text-xs md:text-sm flex-1 text-center select-none active:bg-emerald-200 transition disabled:opacity-50 disabled:pointer-events-none"
                             id={`qty-plus-${product.id}`}
                           >
                             +

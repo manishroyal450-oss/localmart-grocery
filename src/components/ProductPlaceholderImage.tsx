@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 
 interface PlaceholderProps {
   image: string;
@@ -93,6 +94,9 @@ const getUnsplashUrlForProduct = (name: string, category: string): string => {
   if (normName.includes('chips') || normName.includes('crisps') || normName.includes('chocolate') || normName.includes('snack') || normName.includes('sweets') || normName.includes('cream')) {
     return 'https://images.unsplash.com/photo-1599490659213-e2b9527bb087?w=500&auto=format&fit=crop&q=60';
   }
+  if (normName.includes('bulb') || normName.includes('lamp') || normName.includes('led') || normName.includes('charger') || normName.includes('cable') || normName.includes('earphone') || normName.includes('electronic') || normName.includes('battery') || normName.includes('fan') || normName.includes('iron')) {
+    return 'https://images.unsplash.com/photo-1550009158-9ebf6d2d216c?w=500&auto=format&fit=crop&q=60';
+  }
 
   // Category based Unsplash fallbacks
   switch (normCat) {
@@ -118,6 +122,8 @@ const getUnsplashUrlForProduct = (name: string, category: string): string => {
       return 'https://images.unsplash.com/photo-1531525645387-7f14be1bdbbd?w=500&auto=format&fit=crop&q=60';
     case 'apparel & innerwear':
       return 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=500&auto=format&fit=crop&q=60';
+    case 'electronics':
+      return 'https://images.unsplash.com/photo-1550009158-9ebf6d2d216c?w=500&auto=format&fit=crop&q=60';
     default:
       return 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=60';
   }
@@ -132,7 +138,10 @@ export default function ProductPlaceholderImage({ image, name, category, classNa
       className={`relative w-full h-full flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden select-none ${className}`} 
       id={`placeholder-wrapper-${name.replace(/\s+/g, '-').toLowerCase()}`}
     >
-      <img
+      <motion.img
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
         src={imgSrc}
         alt={name}
         className="w-full h-full object-cover rounded-md"

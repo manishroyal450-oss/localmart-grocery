@@ -49,7 +49,8 @@ export const CATEGORIES = [
   'Personal Care',
   'Pet Care',
   'Toys & Games',
-  'Apparel & Innerwear'
+  'Apparel & Innerwear',
+  'Electronics'
 ] as const;
 
 export type CategoryType = typeof CATEGORIES[number];
@@ -64,5 +65,6 @@ export interface Customer {
   pincode: string;
   isVerified: boolean;
   createdAt: string;
+  password?: string;
 }
 

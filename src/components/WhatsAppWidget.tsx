@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageCircle, X, Send, Check, ShieldAlert } from 'lucide-react';
+import { MessageCircle, X, Send, Check, ShieldAlert, ChevronUp, ChevronDown } from 'lucide-react';
 import { Customer } from '../types';
 
 interface WhatsAppWidgetProps {
@@ -29,7 +29,7 @@ export default function WhatsAppWidget({ currentCustomer }: WhatsAppWidgetProps)
 
   const handleSendWhatsApp = (e?: React.FormEvent, customMsg?: string) => {
     if (e) e.preventDefault();
-    const messageToSend = customMsg || message || "Hello! I am visiting Whole Foods Market and need support.";
+    const messageToSend = customMsg || message || "Hello! I am visiting Bari' All-In-One Mart and need support.";
     
     // Auto append user identification if logged in
     let finalMsg = messageToSend;
@@ -39,11 +39,22 @@ export default function WhatsAppWidget({ currentCustomer }: WhatsAppWidgetProps)
 
     const encodedText = encodeURIComponent(finalMsg);
     // WhatsApp URL API (Demonstrating direct merchant connect link)
-    const whatsappUrl = `https://wa.me/919027304872?text=${encodedText}`;
+    const whatsappUrl = `https://wa.me/917500236520?text=${encodedText}`;
     
     window.open(whatsappUrl, '_blank');
     setMessage('');
     setIsOpen(false);
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollToBottom = () => {
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: 'smooth',
+    });
   };
 
   return (
@@ -77,7 +88,7 @@ export default function WhatsAppWidget({ currentCustomer }: WhatsAppWidgetProps)
                 <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-[#075e54]" />
               </div>
               <div className="text-left">
-                <h4 className="font-bold text-sm text-white">Whole Foods Market Live</h4>
+                <h4 className="font-bold text-sm text-white">Bari' Mart Live</h4>
                 <p className="text-[10px] text-emerald-100">Usually replies in under 5 minutes</p>
               </div>
             </div>
@@ -93,7 +104,7 @@ export default function WhatsAppWidget({ currentCustomer }: WhatsAppWidgetProps)
           <div className="p-4 bg-[#0b141a]/95 space-y-4 max-h-64 overflow-y-auto text-left">
             <div className="bg-[#202c33] text-gray-100 p-3 rounded-lg text-xs leading-relaxed max-w-[85%] border-l-4 border-emerald-500">
               <p className="font-semibold text-[10px] text-emerald-400 mb-0.5">SUPPORT AGENT</p>
-              <p>Hey there! 👋 Welcome to <strong className="text-emerald-400">Whole Foods Market Support</strong>. How can we help you today with your fresh grocery order?</p>
+              <p>Hey there! 👋 Welcome to <strong className="text-emerald-400">Bari' All-In-One Mart Support</strong>. How can we help you today with your fresh grocery order?</p>
             </div>
 
             {currentCustomer && (
@@ -142,31 +153,60 @@ export default function WhatsAppWidget({ currentCustomer }: WhatsAppWidgetProps)
         </div>
       )}
 
-      {/* 3. Floating Circular Green Button */}
-      <button
-        type="button"
-        onClick={() => {
-          setIsOpen(!isOpen);
-          setShowTooltip(false);
-        }}
-        className={`h-14 w-14 rounded-full flex items-center justify-center text-white shadow-2xl transition-all duration-300 transform active:scale-95 z-50 ${
-          isOpen ? 'bg-rose-600 hover:bg-rose-500 rotate-90' : 'bg-[#25D366] hover:bg-[#22c35e] hover:shadow-emerald-500/10'
-        }`}
-        id="whatsapp-floating-btn"
-        title="Chat on WhatsApp"
-      >
-        {isOpen ? (
-          <X className="h-6 w-6" />
-        ) : (
-          <div className="relative">
-            <MessageCircle className="h-7 w-7 fill-white/10" />
-            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-yellow-400"></span>
-            </span>
-          </div>
+      {/* 3. Floating Circular Buttons Stack */}
+      <div className="flex flex-col items-center gap-2.5" id="floating-buttons-stack">
+        {!isOpen && (
+          <>
+            {/* Scroll Up Button */}
+            <button
+              type="button"
+              onClick={scrollToTop}
+              className="h-12 w-12 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-800 shadow-lg hover:shadow-xl hover:bg-gray-50 active:scale-90 transition-all duration-200 cursor-pointer"
+              id="scroll-to-top-btn"
+              title="Scroll to Top"
+            >
+              <ChevronUp className="h-6 w-6 text-gray-850 stroke-[3.5]" />
+            </button>
+
+            {/* Scroll Down Button */}
+            <button
+              type="button"
+              onClick={scrollToBottom}
+              className="h-12 w-12 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-800 shadow-lg hover:shadow-xl hover:bg-gray-50 active:scale-90 transition-all duration-200 cursor-pointer"
+              id="scroll-to-bottom-btn"
+              title="Scroll to Bottom"
+            >
+              <ChevronDown className="h-6 w-6 text-gray-850 stroke-[3.5]" />
+            </button>
+          </>
         )}
-      </button>
+
+        {/* Floating Circular Green Button */}
+        <button
+          type="button"
+          onClick={() => {
+            setIsOpen(!isOpen);
+            setShowTooltip(false);
+          }}
+          className={`h-14 w-14 rounded-full flex items-center justify-center text-white shadow-2xl transition-all duration-300 transform active:scale-95 z-50 ${
+            isOpen ? 'bg-rose-600 hover:bg-rose-500 rotate-90' : 'bg-[#25D366] hover:bg-[#22c35e] hover:shadow-emerald-500/10'
+          }`}
+          id="whatsapp-floating-btn"
+          title="Chat on WhatsApp"
+        >
+          {isOpen ? (
+            <X className="h-6 w-6" />
+          ) : (
+            <div className="relative">
+              <MessageCircle className="h-7 w-7 fill-white/10" />
+              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-yellow-400"></span>
+              </span>
+            </div>
+          )}
+        </button>
+      </div>
 
     </div>
   );

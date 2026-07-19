@@ -81,7 +81,7 @@ export default function CartSidebar({
     const deliveryEmoji = order.deliveryType === 'delivery' ? '🏠 Home Delivery' : '🏪 Self-Pickup';
     const addressStr = order.deliveryType === 'delivery' ? `\n📍 *Address:* ${order.customerAddress}` : '';
 
-    const messageText = `*🛒 NEW ORDER PLACED AT WHOLE FOODS MARKET*\n\n` +
+    const messageText = `*🛒 NEW ORDER PLACED AT BARI' ALL-IN-ONE MART*\n\n` +
       `📦 *Order ID:* #${order.id}\n` +
       `👤 *Customer Name:* ${order.customerName}\n` +
       `📞 *Phone:* ${order.customerPhone}\n` +
@@ -144,7 +144,7 @@ export default function CartSidebar({
         <div className="w-screen max-w-md bg-gray-50 flex flex-col shadow-2xl relative" id="cart-drawer-container">
           
           {/* Header */}
-          <div className="bg-[#2874f0] text-white px-6 py-4 flex items-center justify-between" id="cart-header">
+          <div className="bg-emerald-800 text-white px-6 py-4 flex items-center justify-between" id="cart-header">
             <h3 className="text-lg font-bold flex items-center gap-2">
               <ShoppingBag className="h-5 w-5 text-yellow-400" />
               <span>{placedOrder ? 'Order Placed!' : 'Your Shopping Cart'}</span>
@@ -152,7 +152,7 @@ export default function CartSidebar({
             <button 
               onClick={onClose}
               disabled={isSubmitting}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff9f00] hover:bg-orange-600 text-white font-extrabold text-[11px] rounded-lg transition-all shadow-md focus:outline-none disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] rounded-lg transition-all shadow-md focus:outline-none disabled:opacity-50"
               id="close-cart-drawer"
             >
               <span>Close ❌</span>
@@ -171,7 +171,7 @@ export default function CartSidebar({
               <div className="w-full bg-gray-50 border border-gray-200 rounded-lg p-5 mb-6 text-left" id="order-success-summary">
                 <div className="flex justify-between items-center pb-3 border-b border-gray-200 mb-3">
                   <span className="text-xs text-gray-500 font-bold">ORDER ID</span>
-                  <span className="text-sm font-extrabold text-[#2874f0] font-mono">#{placedOrder.id}</span>
+                  <span className="text-sm font-extrabold text-emerald-800 font-mono">#{placedOrder.id}</span>
                 </div>
                 <div className="space-y-1.5 text-xs text-gray-700">
                   <p><strong className="text-gray-900">Name:</strong> {placedOrder.customerName}</p>
@@ -188,15 +188,15 @@ export default function CartSidebar({
               </div>
 
               <div className="w-full space-y-3">
-                <div className="flex flex-col gap-1 text-xs text-gray-600 justify-center items-center bg-blue-50/70 p-3 rounded border border-blue-100 text-center">
-                  <div className="flex items-center gap-2 font-bold text-[#2874f0]">
+                <div className="flex flex-col gap-1 text-xs text-gray-600 justify-center items-center bg-emerald-50/70 p-3 rounded border border-emerald-100 text-center">
+                  <div className="flex items-center gap-2 font-bold text-emerald-800">
                     <PackageCheck className="h-4 w-4" />
                     <span>The store owner is packing your items now.</span>
                   </div>
                   <p className="text-[11px] text-gray-500 mt-1 font-semibold leading-relaxed">
                     Need fast dispatch or home delivery? <br />
-                    Call us: <a href="tel:9258170946" className="text-[#2874f0] font-black hover:underline font-mono">9258170946</a> <br />
-                    WhatsApp: <a href="https://wa.me/919027304872" target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-black hover:underline font-mono">9027304872</a>
+                    Call us: <a href="tel:+917500236520" className="text-emerald-800 font-black hover:underline font-mono">+91 75002 36520</a> <br />
+                    WhatsApp: <a href="https://wa.me/917500236520" target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-black hover:underline font-mono">+91 75002 36520</a>
                   </p>
                 </div>
                 
@@ -214,7 +214,7 @@ export default function CartSidebar({
                     setPlacedOrder(null);
                     onClose();
                   }}
-                  className="w-full bg-[#2874f0] hover:bg-blue-600 text-white font-extrabold py-3 px-4 rounded shadow transition-all active:scale-[0.98]"
+                  className="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold py-3 px-4 rounded shadow transition-all active:scale-[0.98]"
                   id="success-continue-shopping"
                 >
                   CONTINUE SHOPPING
@@ -226,16 +226,16 @@ export default function CartSidebar({
               {/* Content section */}
               {cartItems.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 bg-white" id="empty-cart-state">
-                  <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
-                    <ShoppingBag className="h-8 w-8 text-[#2874f0]" />
+                  <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-4">
+                    <ShoppingBag className="h-8 w-8 text-emerald-800" />
                   </div>
                   <h4 className="text-lg font-bold text-gray-800">Your Cart is Empty</h4>
                   <p className="text-sm text-gray-500 text-center mt-1 max-w-xs">
-                    Explore our Flipkart Grocery shelves and add fresh items to start your shopping journey!
+                    Explore our Bari' All-In-One Mart shelves and add fresh premium items to start your shopping journey!
                   </p>
                   <button
                     onClick={onClose}
-                    className="mt-6 px-5 py-2.5 bg-[#2874f0] hover:bg-blue-600 text-white font-bold text-xs rounded shadow"
+                    className="mt-6 px-5 py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs rounded shadow"
                   >
                     START SHOPPING
                   </button>
@@ -341,7 +341,7 @@ export default function CartSidebar({
                           onClick={() => setDeliveryType('delivery')}
                           className={`py-1.5 text-xs font-bold rounded-md transition flex items-center justify-center gap-1 ${
                             deliveryType === 'delivery' 
-                              ? 'bg-white text-[#2874f0] shadow-sm' 
+                              ? 'bg-white text-emerald-800 shadow-sm' 
                               : 'text-gray-600 hover:text-gray-900'
                           }`}
                         >
@@ -352,7 +352,7 @@ export default function CartSidebar({
                           onClick={() => setDeliveryType('pickup')}
                           className={`py-1.5 text-xs font-bold rounded-md transition flex items-center justify-center gap-1 ${
                             deliveryType === 'pickup' 
-                              ? 'bg-white text-[#2874f0] shadow-sm' 
+                              ? 'bg-white text-emerald-800 shadow-sm' 
                               : 'text-gray-600 hover:text-gray-900'
                           }`}
                         >
@@ -367,7 +367,7 @@ export default function CartSidebar({
                           type="text"
                           required
                           placeholder="Enter your name"
-                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none"
                           value={customerName}
                           onChange={(e) => setCustomerName(e.target.value)}
                         />
@@ -381,7 +381,7 @@ export default function CartSidebar({
                           required
                           maxLength={10}
                           placeholder="Enter 10-digit phone number"
-                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono"
+                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none font-mono"
                           value={customerPhone}
                           onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
                         />
@@ -395,17 +395,27 @@ export default function CartSidebar({
                             required
                             rows={2}
                             placeholder="Street, Landmark, Apartment, Block details"
-                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none"
                             value={customerAddress}
                             onChange={(e) => setCustomerAddress(e.target.value)}
                           />
                         </div>
                       )}
 
+                      {/* Pulse-Border Animated No-Return Policy Notice */}
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-800 text-[11.5px] leading-relaxed animate-pulse-border mt-3">
+                        <div className="flex items-center gap-1.5 font-extrabold uppercase text-red-700 mb-1 text-[11px]">
+                          <span>🚫 Store Return Policy</span>
+                        </div>
+                        <p className="font-semibold text-red-900">
+                          Bari' Mart operates on a strict <strong className="font-black underline text-red-700">No Product Return After Sale</strong> policy. Please inspect and verify your items carefully upon delivery or pickup.
+                        </p>
+                      </div>
+
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="w-full bg-[#fb641b] hover:bg-[#e15310] text-white font-extrabold py-3 px-4 rounded shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-sm transition-all active:scale-[0.98] disabled:bg-gray-400 disabled:pointer-events-none mt-4"
+                        className="w-full bg-emerald-800 hover:bg-emerald-950 text-white font-extrabold py-3 px-4 rounded shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-sm transition-all active:scale-[0.98] disabled:bg-gray-400 disabled:pointer-events-none mt-4"
                         id="place-order-submit-btn"
                       >
                         {isSubmitting ? 'PROCESSING ORDER...' : 'PLACE ORDER NOW'}

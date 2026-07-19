@@ -1113,5 +1113,54 @@ export const ALL_PRODUCTS: Product[] = [
     image: 'apparel-socks-placeholder',
     description: 'Premium quality thick athletic socks. Soft padding for sweat-absorption.',
     isAvailable: true
+  },
+  // ==================== ELECTRONICS ====================
+  {
+    id: 'prod-92',
+    name: 'Syska 9W Cool Day Light LED Bulb (Pack of 2)',
+    category: 'Electronics',
+    price: 179,
+    originalPrice: 299,
+    unit: '2 Units',
+    stock: 85,
+    image: 'elec-led-bulb',
+    description: 'Energy-saving cool day light LED bulb with standard B22 base. Durable and eco-friendly.',
+    isAvailable: true
+  },
+  {
+    id: 'prod-93',
+    name: 'OnePlus Bullets Wireless Z2 Bluetooth Earphones',
+    category: 'Electronics',
+    price: 1699,
+    originalPrice: 1999,
+    unit: '1 Unit',
+    stock: 45,
+    image: 'elec-oneplus-earphones',
+    description: 'High-quality wireless earphones with massive bass, 30 hours of battery life, and fast charging.',
+    isAvailable: true
+  },
+  {
+    id: 'prod-94',
+    name: 'Portronics 2.4A Dual USB Smart Charger with Micro-USB Cable',
+    category: 'Electronics',
+    price: 249,
+    originalPrice: 499,
+    unit: '1 Set',
+    stock: 120,
+    image: 'elec-charger-adapter',
+    description: 'Compact charger adapter with safe dual-port output. Comes with a high-durability charging cable.',
+    isAvailable: true
+  },
+  {
+    id: 'prod-95',
+    name: 'Havells 1000W Lightweight Dry Iron',
+    category: 'Electronics',
+    price: 799,
+    originalPrice: 1195,
+    unit: '1 Unit',
+    stock: 30,
+    image: 'elec-dry-iron',
+    description: 'Quick-heating dry iron with non-stick Teflon coated soleplate and multi-fabric temperature dial.',
+    isAvailable: true
   }
 ];

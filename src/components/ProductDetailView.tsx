@@ -87,7 +87,7 @@ export default function ProductDetailView({
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6" id="detail-breadcrumbs-bar">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2 bg-[#ff9f00] hover:bg-orange-600 text-white font-extrabold text-xs rounded-lg transition-all shadow-md group"
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-750 text-white font-extrabold text-xs rounded-lg transition-all shadow-md group"
           id="detail-back-button"
         >
           <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
@@ -95,7 +95,7 @@ export default function ProductDetailView({
         </button>
 
         <div className="flex items-center gap-1.5 text-xs text-gray-500 font-semibold">
-          <span className="hover:text-blue-500 cursor-pointer" onClick={onBack}>Home</span>
+          <span className="hover:text-emerald-700 cursor-pointer" onClick={onBack}>Home</span>
           <ChevronRight className="h-3 w-3" />
           <span className="text-gray-400 font-normal">{product.category}</span>
           <ChevronRight className="h-3 w-3" />
@@ -128,13 +128,13 @@ export default function ProductDetailView({
 
           {/* Upload Photo Button Under Image (Admin only) */}
           {isAdmin && (
-            <div className="mt-4 w-full max-w-[380px] text-center bg-blue-50/50 rounded-xl p-3 border border-blue-100/50">
+            <div className="mt-4 w-full max-w-[380px] text-center bg-emerald-50/50 rounded-xl p-3 border border-emerald-100/50">
               <p className="text-[11px] text-gray-500 font-medium mb-2">
                 Spotted a quality issue? Upload a fresh local store picture!
               </p>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-blue-50 border border-blue-200 text-[#2874f0] font-bold text-xs rounded-lg transition-all shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-emerald-50 border border-emerald-200 text-emerald-850 font-bold text-xs rounded-lg transition-all shadow-sm"
                 id="detail-upload-image-button"
               >
                 <Upload className="h-3.5 w-3.5" />
@@ -157,10 +157,10 @@ export default function ProductDetailView({
             {/* Category Tag & Rating */}
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-[#2874f0] text-white text-xs font-black px-3.5 py-1 rounded-full uppercase tracking-wider shadow-sm font-mono flex items-center gap-1">
-                  <span className="opacity-80">S.No.</span> {getSerialNumber(product.id)}
+                <span className="bg-emerald-800 text-white text-xs font-black px-3.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                  Bari' Mart
                 </span>
-                <span className="bg-[#2874f0]/10 text-[#2874f0] text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                <span className="bg-emerald-50 text-emerald-850 border border-emerald-100/50 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                   {product.category}
                 </span>
               </div>
@@ -213,7 +213,7 @@ export default function ProductDetailView({
             {/* Description Section */}
             <div className="mb-6">
               <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <Info className="h-4 w-4 text-[#2874f0]" /> Product Description
+                <Info className="h-4 w-4 text-emerald-800" /> Product Description
               </h3>
               <p className="text-xs md:text-sm text-gray-600 leading-relaxed bg-gray-50/50 rounded-xl p-4 border border-gray-100/50">
                 {product.description || `Fresh, premium quality ${product.name.toLowerCase()} sourced directly from verified local suppliers. Certified safe, hygienic, and graded under premium grocery standards.`}
@@ -223,12 +223,12 @@ export default function ProductDetailView({
             {/* Quick Delivery / Assurance Tags */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 bg-white border border-gray-100 rounded-xl p-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-800">
                   <Truck className="h-4 w-4" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-gray-900">Instant Local Delivery</h4>
-                  <p className="text-[10px] text-gray-500 font-semibold">Deliver to <strong className="text-blue-600">{pincode}</strong> in 2 hours</p>
+                  <p className="text-[10px] text-gray-500 font-semibold">Deliver to <strong className="text-emerald-800">{pincode}</strong> in 2 hours</p>
                 </div>
               </div>
 
@@ -252,28 +252,28 @@ export default function ProductDetailView({
                   <button
                     onClick={() => onAddToCart(product)}
                     disabled={isOutOfStock}
-                    className="w-full bg-[#ff9f00] hover:bg-[#f39500] text-white font-black text-sm py-3.5 px-6 rounded-xl shadow-md flex items-center justify-center gap-2 border border-[#ff9f00] hover:shadow-lg transition active:scale-[0.98] disabled:bg-gray-100 disabled:border-gray-100 disabled:text-gray-400 disabled:shadow-none disabled:pointer-events-none"
+                    className="w-full bg-emerald-800 hover:bg-emerald-950 text-white font-black text-sm py-3.5 px-6 rounded-xl shadow-md flex items-center justify-center gap-2 border border-emerald-800 hover:shadow-lg transition active:scale-[0.98] disabled:bg-gray-100 disabled:border-gray-100 disabled:text-gray-400 disabled:shadow-none disabled:pointer-events-none"
                     id={`detail-add-btn-${product.id}`}
                   >
                     <ShoppingCart className="h-4 w-4" />
                     <span>ADD TO SHOPPING CART</span>
                   </button>
                 ) : (
-                  <div className="flex items-center w-full border-2 border-orange-400 rounded-xl overflow-hidden shadow-sm" id={`detail-qty-counter-${product.id}`}>
+                  <div className="flex items-center w-full border-2 border-emerald-600 rounded-xl overflow-hidden shadow-sm" id={`detail-qty-counter-${product.id}`}>
                     <button
                       onClick={() => onRemoveFromCart(product)}
-                      className="bg-orange-50 hover:bg-orange-100 text-orange-600 font-black px-5 py-3.5 text-sm flex-1 text-center select-none active:bg-orange-200 transition"
+                      className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-black px-5 py-3.5 text-sm flex-1 text-center select-none active:bg-emerald-200 transition"
                       id={`detail-qty-minus-${product.id}`}
                     >
                       &minus;
                     </button>
-                    <span className="text-sm font-black text-orange-700 bg-white px-4 py-3.5 flex-1 text-center select-none">
+                    <span className="text-sm font-black text-emerald-800 bg-white px-4 py-3.5 flex-1 text-center select-none">
                       {quantity} Unit{quantity > 1 ? 's' : ''} in Cart
                     </span>
                     <button
                       onClick={() => onAddToCart(product)}
                       disabled={quantity >= product.stock}
-                      className="bg-orange-50 hover:bg-orange-100 text-orange-600 font-black px-5 py-3.5 text-sm flex-1 text-center select-none active:bg-orange-200 transition disabled:opacity-50 disabled:pointer-events-none"
+                      className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-black px-5 py-3.5 text-sm flex-1 text-center select-none active:bg-emerald-200 transition disabled:opacity-50 disabled:pointer-events-none"
                       id={`detail-qty-plus-${product.id}`}
                     >
                       +
@@ -345,7 +345,7 @@ export default function ProductDetailView({
                       <span className="text-[9px] text-gray-400 font-bold tracking-tight">
                         {simProd.unit}
                       </span>
-                      <h4 className="text-xs font-bold text-gray-800 line-clamp-2 mt-0.5 leading-tight group-hover:text-[#2874f0] transition-colors min-h-[32px]">
+                      <h4 className="text-xs font-bold text-gray-800 line-clamp-2 mt-0.5 leading-tight group-hover:text-emerald-800 transition-colors min-h-[32px]">
                         {simProd.name}
                       </h4>
                     </div>
@@ -356,7 +356,7 @@ export default function ProductDetailView({
                       </div>
                       
                       {/* Tiny Mini Button indicator */}
-                      <span className="text-[10px] text-[#2874f0] font-black group-hover:underline flex items-center gap-0.5">
+                      <span className="text-[10px] text-emerald-800 font-black group-hover:underline flex items-center gap-0.5">
                         View Details <ChevronRight className="h-3 w-3" />
                       </span>
                     </div>

@@ -1,6 +1,0 @@
-{
-  "firestore": {
-    "database": "ai-studio-localmartgrocery-f779cc2e-bb7a-4aa9-aa78-740b1c4aeef5",
-    "rules": "firestore.rules"
-  }
-}

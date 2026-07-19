@@ -49,16 +49,15 @@ export default function CustomerAccountModal({
     }
   }, [isOpen, currentCustomer]);
 
-  // Load customer orders
+  // Load customer orders (Localized)
   const loadOrders = async () => {
     if (!currentCustomer?.phone) return;
     setLoadingOrders(true);
     try {
-      const response = await fetch(`/api/orders/customer/${currentCustomer.phone}`);
-      if (response.ok) {
-        const data = await response.json();
-        setOrders(data);
-      }
+      const savedOrdersStr = localStorage.getItem('localmart_grocery_orders') || '[]';
+      const savedOrders = JSON.parse(savedOrdersStr);
+      const filtered = savedOrders.filter((o: any) => o.customerPhone === currentCustomer.phone);
+      setOrders(filtered);
     } catch (err) {
       console.error('Error fetching customer orders:', err);
     } finally {
@@ -102,25 +101,36 @@ export default function CustomerAccountModal({
 
     setUpdating(true);
     try {
-      const response = await fetch('/api/customers/update', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: currentCustomer.email,
-          fullName: fullName.trim(),
-          phone: phone.trim(),
-          shippingAddress: shippingAddress.trim(),
-          city: city.trim(),
-          pincode: pincode.trim(),
-        }),
+      // Update local storage of registered customers
+      const savedCustomersStr = localStorage.getItem('localmart_grocery_customers') || '[]';
+      const savedCustomers: Customer[] = JSON.parse(savedCustomersStr);
+
+      const updatedCustomers = savedCustomers.map((c: Customer) => {
+        if (c.email.toLowerCase() === currentCustomer.email.toLowerCase()) {
+          return {
+            ...c,
+            fullName: fullName.trim(),
+            phone: phone.trim(),
+            shippingAddress: shippingAddress.trim(),
+            city: city.trim(),
+            pincode: pincode.trim(),
+          };
+        }
+        return c;
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update profile.');
-      }
+      localStorage.setItem('localmart_grocery_customers', JSON.stringify(updatedCustomers));
 
-      onUpdateProfile(data.customer);
+      const updatedCustomer: Customer = {
+        ...currentCustomer,
+        fullName: fullName.trim(),
+        phone: phone.trim(),
+        shippingAddress: shippingAddress.trim(),
+        city: city.trim(),
+        pincode: pincode.trim(),
+      };
+
+      onUpdateProfile(updatedCustomer);
       setSuccessMsg('Profile updated successfully!');
       setIsEditing(false);
     } catch (err: any) {

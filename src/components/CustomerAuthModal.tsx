@@ -62,7 +62,7 @@ export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess, init
     return null;
   };
 
-  // Step 1: Handle Initial Signup Submit -> Generates Verification Code
+  // Step 1: Handle Initial Signup Submit -> Generates Verification Code (Localized)
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -75,18 +75,21 @@ export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess, init
 
     setLoading(true);
     try {
-      const response = await fetch('/api/customers/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), fullName: fullName.trim() }),
-      });
+      // Check if email already exists locally
+      const savedCustomersStr = localStorage.getItem('localmart_grocery_customers') || '[]';
+      const savedCustomers: Customer[] = JSON.parse(savedCustomersStr);
+      
+      const emailExists = savedCustomers.some(
+        (c: Customer) => c.email.toLowerCase() === email.trim().toLowerCase()
+      );
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to initialize account.');
+      if (emailExists) {
+        throw new Error('An account with this email address already exists.');
       }
 
-      setSentOtp(data.otp);
+      // Generate a secure 4-digit code and transition to code verification mode
+      const generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+      setSentOtp(generatedCode);
       setMode('verify');
       setShowOtpBanner(true);
     } catch (err: any) {
@@ -96,7 +99,7 @@ export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess, init
     }
   };
 
-  // Step 2: Handle Code Verification & Final Account Creation
+  // Step 2: Handle Code Verification & Final Account Creation (Localized)
   const handleVerifySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -108,28 +111,28 @@ export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess, init
 
     setLoading(true);
     try {
-      const response = await fetch('/api/customers/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: fullName.trim(),
-          email: email.trim(),
-          password: password,
-          phone: phone.trim(),
-          shippingAddress: shippingAddress.trim(),
-          city: city.trim(),
-          pincode: pincode.trim(),
-          code: userOtp.trim()
-        }),
-      });
+      const savedCustomersStr = localStorage.getItem('localmart_grocery_customers') || '[]';
+      const savedCustomers: Customer[] = JSON.parse(savedCustomersStr);
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Verification failed.');
-      }
+      const newCustomer: Customer = {
+        id: 'cust-' + Date.now(),
+        fullName: fullName.trim(),
+        email: email.trim(),
+        password: password, // Store password locally for mock logins
+        phone: phone.trim(),
+        shippingAddress: shippingAddress.trim(),
+        city: city.trim(),
+        pincode: pincode.trim(),
+        isVerified: true,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Add to our local list and save to localStorage
+      savedCustomers.push(newCustomer);
+      localStorage.setItem('localmart_grocery_customers', JSON.stringify(savedCustomers));
 
       // Success
-      onAuthSuccess(data.customer);
+      onAuthSuccess(newCustomer);
       onClose();
     } catch (err: any) {
       setError(err.message || 'Error finalizing account creation.');
@@ -138,7 +141,7 @@ export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess, init
     }
   };
 
-  // Handle Log In Submit
+  // Handle Log In Submit (Localized)
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -150,21 +153,20 @@ export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess, init
 
     setLoading(true);
     try {
-      const response = await fetch('/api/customers/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim(),
-          password: password
-        }),
-      });
+      const savedCustomersStr = localStorage.getItem('localmart_grocery_customers') || '[]';
+      const savedCustomers: Customer[] = JSON.parse(savedCustomersStr);
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Invalid credentials.');
+      // Check credentials
+      const foundCustomer = savedCustomers.find(
+        (c: Customer) => c.email.toLowerCase() === email.trim().toLowerCase() && c.password === password
+      );
+
+      if (!foundCustomer) {
+        throw new Error('Invalid email or password credentials.');
       }
 
-      onAuthSuccess(data.customer);
+      // Success
+      onAuthSuccess(foundCustomer);
       onClose();
     } catch (err: any) {
       setError(err.message || 'Login failed. Please verify your email and password.');
@@ -204,7 +206,7 @@ export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess, init
               <User className="h-3.5 w-3.5 text-emerald-400" />
             </div>
             <span className="font-extrabold text-xs md:text-sm tracking-widest uppercase text-gray-200">
-              {mode === 'login' ? 'SIGN IN TO YOUR ACCOUNT' : 'CREATE WHOLE FOODS ACCOUNT'}
+              {mode === 'login' ? 'SIGN IN TO YOUR ACCOUNT' : "CREATE BARI' MART ACCOUNT"}
             </span>
           </div>
 
