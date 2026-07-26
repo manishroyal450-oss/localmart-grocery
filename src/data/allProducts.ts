@@ -4,13 +4,13 @@ export const ALL_PRODUCTS: Product[] = [
   // ==================== FRUITS & VEGETABLES ====================
   {
     id: 'prod-1',
-    name: 'Fresh Organic Red Tomato (लाल टमाटर)',
-    category: 'Fruits & Vegetables',
+    name: chocolate 
+    category: 'fast food',
     price: 40,
     originalPrice: 50,
     unit: '1 kg',
     stock: 120,
-    image: 'tomato-placeholder',
+    image: '',
     description: 'Farm-fresh, juicy red tomatoes. Rich in Lycopene, perfect for curries, salads, and soups.',
     isAvailable: true
   },
