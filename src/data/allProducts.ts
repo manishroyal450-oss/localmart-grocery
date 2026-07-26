@@ -5,7 +5,7 @@ export const ALL_PRODUCTS: Product[] = [
   {
     id: 'prod-1',
     name: chocolate 
-    category: 'fast food',
+    category: 'snacks',
     price: 40,
     originalPrice: 50,
     unit: '1 kg',
