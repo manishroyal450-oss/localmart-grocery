@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, ShoppingCart, Store, User, MapPin, Menu } from 'lucide-react';
+import { Search, ShoppingCart, Store, User, MapPin, Menu, Utensils, ShoppingBag, ShieldCheck, Sparkles } from 'lucide-react';
 import { CategoryType, Customer } from '../types';
 import ShiftingMenu from './ShiftingMenu';
 
@@ -14,6 +14,9 @@ interface NavbarProps {
   onOpenAuth: () => void;
   onLogout: () => void;
   onOpenAccount: () => void;
+  currentView: 'grocery' | 'restaurant' | 'privacy';
+  setCurrentView: (view: 'grocery' | 'restaurant' | 'privacy') => void;
+  onOpenPrivacyPolicy?: () => void;
 }
 
 export default function Navbar({
@@ -27,6 +30,9 @@ export default function Navbar({
   onOpenAuth,
   onLogout,
   onOpenAccount,
+  currentView,
+  setCurrentView,
+  onOpenPrivacyPolicy,
 }: NavbarProps) {
   const [pinInput, setPinInput] = React.useState(currentPincode);
   const [showPinModal, setShowPinModal] = React.useState(false);
@@ -43,26 +49,71 @@ export default function Navbar({
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-emerald-800 text-white shadow-md font-sans" id="main-header">
+    <header className="sticky top-0 z-50 bg-emerald-850 text-white shadow-md font-sans border-b border-emerald-900" id="main-header">
       {/* Primary Top Bar */}
       <div className="mx-auto max-w-7xl px-4 md:px-8">
-        <div className="flex h-16 items-center justify-between gap-4">
+        <div className="flex h-16 items-center justify-between gap-3 md:gap-6">
           
-          {/* Brand Logo - Bari' All-In-One Mart Style */}
-          <div className="flex flex-col cursor-pointer" onClick={() => setIsAdmin(false)} id="brand-logo">
-            <span className="text-lg md:text-xl font-black italic tracking-tight flex items-center">
-              Bari'
-              <span className="text-yellow-400 font-extrabold not-italic ml-1">All-In-One Mart</span>
+          {/* Brand Logo - Manish Royal Web Designer */}
+          <div 
+            className="flex flex-col cursor-pointer flex-shrink-0 group" 
+            onClick={() => {
+              setIsAdmin(false);
+              setCurrentView('grocery');
+            }} 
+            id="brand-logo"
+          >
+            <span className="text-lg md:text-xl font-black tracking-tight flex items-center gap-1.5">
+              <span className="text-white group-hover:text-yellow-300 transition-colors duration-300">Manish Royal</span>
+              <span className="animate-shimmer-text font-extrabold text-sm md:text-base px-2 py-0.5 rounded-full bg-emerald-950/80 border border-yellow-400/40 shadow-sm flex items-center gap-1">
+                <Sparkles className="h-3.5 w-3.5 text-yellow-400 animate-spin" style={{ animationDuration: '4s' }} />
+                Web Designer
+              </span>
             </span>
-            <span className="text-[10px] text-yellow-300 italic -mt-0.5 font-semibold flex items-center gap-0.5">
-              Organic & Fresh Grocery • Daily Essentials
+            <span className="text-[10px] text-yellow-300 italic -mt-0.5 font-semibold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              Animated UI • Organic Grocery & Cafe Hub
             </span>
           </div>
+
+          {/* Navigation View Switcher Tabs (Grocery vs Restaurant) */}
+          {!isAdmin && (
+            <div className="hidden sm:flex items-center bg-emerald-950/80 p-1 rounded-xl border border-emerald-700/60 text-xs font-bold shadow-inner">
+              <button
+                onClick={() => setCurrentView('grocery')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
+                  currentView === 'grocery'
+                    ? 'bg-yellow-400 text-gray-950 font-black shadow-sm'
+                    : 'text-emerald-100 hover:text-white hover:bg-emerald-800/60'
+                }`}
+                id="nav-tab-grocery"
+              >
+                <ShoppingBag className="h-3.5 w-3.5" />
+                <span>Grocery Store</span>
+              </button>
+
+              <button
+                onClick={() => setCurrentView('restaurant')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all duration-200 cursor-pointer relative ${
+                  currentView === 'restaurant'
+                    ? 'bg-amber-500 text-gray-950 font-black shadow-sm'
+                    : 'text-emerald-100 hover:text-white hover:bg-emerald-800/60'
+                }`}
+                id="nav-tab-restaurant"
+              >
+                <Utensils className="h-3.5 w-3.5 text-amber-900" />
+                <span>Restaurant Menu</span>
+                <span className="ml-1 bg-red-600 text-white text-[8px] font-black uppercase px-1.5 py-0.2 rounded-full animate-pulse">
+                  NEW
+                </span>
+              </button>
+            </div>
+          )}
 
           {/* Delivery Pin Selector (Local indicator) */}
           <div 
             onClick={() => setShowPinModal(true)}
-            className="hidden sm:flex items-center gap-1 cursor-pointer hover:bg-emerald-700/50 p-1.5 rounded transition"
+            className="hidden lg:flex items-center gap-1 cursor-pointer hover:bg-emerald-700/50 p-1.5 rounded transition"
             id="pincode-trigger"
           >
             <MapPin className="h-4 w-4 text-yellow-400" />
@@ -73,29 +124,80 @@ export default function Navbar({
           </div>
 
           {/* Actions / Nav Buttons consolidated into the modern Shifting Side Menu */}
-          <div className="flex items-center gap-2 md:gap-4 ml-auto" id="nav-actions">
+          <div className="flex items-center gap-2 md:gap-3 ml-auto" id="nav-actions">
             
+            {/* Quick Cart Button */}
+            <button
+              onClick={onOpenCart}
+              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-900/90 hover:bg-emerald-900 border border-emerald-700/80 text-white rounded-lg font-bold text-xs shadow-xs transition"
+              id="navbar-cart-quick-btn"
+            >
+              <ShoppingCart className="h-4 w-4 text-yellow-400" />
+              <span className="hidden sm:inline">Cart</span>
+              {cartCount > 0 && (
+                <span className="bg-yellow-400 text-gray-950 text-[10px] font-black px-1.5 py-0.2 rounded-full font-mono">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+
             {/* Unified Store Menu Toggle Button */}
             <button
               onClick={() => setIsMenuOpen(true)}
               className="flex items-center gap-2 px-3.5 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 rounded-lg font-extrabold text-xs md:text-sm tracking-wide shadow-sm hover:shadow-md transition-all duration-200 relative group border border-yellow-500 cursor-pointer"
               id="shifting-menu-trigger-btn"
             >
-              <Menu className="h-4 w-4 md:h-4.5 md:w-4.5 text-gray-900 group-hover:rotate-12 transition-transform duration-200" />
+              <Menu className="h-4 w-4 text-gray-900 group-hover:rotate-12 transition-transform duration-200" />
               <span>Store Menu</span>
-              
-              {/* Simple Cart Count Notification Badge on the Menu Trigger */}
-              {cartCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 flex h-4.5 min-w-[18px] px-1.5 rounded-full bg-rose-600 text-[9px] font-black text-white items-center justify-center shadow animate-pulse border border-white">
-                  {cartCount}
-                </span>
-              )}
             </button>
 
           </div>
 
         </div>
       </div>
+
+      {/* Mobile Nav Switcher Strip */}
+      {!isAdmin && (
+        <div className="sm:hidden flex bg-emerald-950 border-t border-emerald-800 text-xs font-bold">
+          <button
+            onClick={() => setCurrentView('grocery')}
+            className={`flex-1 py-2 flex items-center justify-center gap-1.5 transition ${
+              currentView === 'grocery'
+                ? 'bg-yellow-400 text-gray-950 font-black'
+                : 'text-gray-300 hover:bg-emerald-900'
+            }`}
+          >
+            <ShoppingBag className="h-3.5 w-3.5" />
+            <span>Grocery Store</span>
+          </button>
+          <button
+            onClick={() => setCurrentView('restaurant')}
+            className={`flex-1 py-2 flex items-center justify-center gap-1.5 transition relative ${
+              currentView === 'restaurant'
+                ? 'bg-amber-500 text-gray-950 font-black'
+                : 'text-gray-300 hover:bg-emerald-900'
+            }`}
+          >
+            <Utensils className="h-3.5 w-3.5" />
+            <span>Restaurant Menu</span>
+            <span className="bg-red-600 text-white text-[7px] font-black uppercase px-1 rounded-full">
+              HOT
+            </span>
+          </button>
+          <button
+            onClick={() => setCurrentView('privacy')}
+            className={`px-3 py-2 flex items-center justify-center gap-1 transition ${
+              currentView === 'privacy'
+                ? 'bg-emerald-700 text-white font-black'
+                : 'text-emerald-300 hover:bg-emerald-900'
+            }`}
+            id="mobile-nav-privacy-btn"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-yellow-400" />
+            <span>Privacy</span>
+          </button>
+        </div>
+      )}
 
       {/* Consolidated Shifting Side Menu Drawer */}
       <ShiftingMenu
@@ -111,9 +213,13 @@ export default function Navbar({
         onOpenAccount={onOpenAccount}
         currentPincode={currentPincode}
         onOpenPincodeModal={() => setShowPinModal(true)}
+        currentView={currentView === 'privacy' ? 'grocery' : currentView}
+        setCurrentView={(v) => setCurrentView(v)}
+        onOpenPrivacyPolicy={onOpenPrivacyPolicy}
       />
 
       {/* Pincode Selector Modal */}
+
       {showPinModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" id="pincode-modal">
           <div className="w-full max-w-sm bg-white rounded-lg p-6 shadow-2xl text-gray-800 animate-in fade-in zoom-in-95 duration-150">

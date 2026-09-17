@@ -1,598 +1,526 @@
-import React from 'react';
-import Navbar from './components/Navbar';
-import GroceryCatalog from './components/GroceryCatalog';
-import AdminPanel from './components/AdminPanel';
-import CartSidebar from './components/CartSidebar';
-import LoginModal from './components/LoginModal';
-import CustomerAuthModal from './components/CustomerAuthModal';
-import CustomerAccountModal from './components/CustomerAccountModal';
-import WhatsAppWidget from './components/WhatsAppWidget';
-import ProductDetailView from './components/ProductDetailView';
-import { Product, Order, CartItem, Customer, OrderItem } from './types';
-import { ShoppingCart, RefreshCw, AlertTriangle } from 'lucide-react';
-import { ALL_PRODUCTS } from './data/allProducts';
-import { motion } from 'motion/react';
-import storefrontImg from './assets/images/bari_storefront_1784447298609.jpg';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { MenuItem } from './types';
+import { fetchMenuData, getCategoryIcon } from './services/menuService';
+import { ZomatoHeader, GOOGLE_MAPS_URL, CAFE_FULL_ADDRESS } from './components/ZomatoHeader';
+import ZomatoBanner from './components/ZomatoBanner';
+import CircularCategoryBar from './components/CircularCategoryBar';
+import HorizontalDishesRow from './components/HorizontalDishesRow';
+import ZomatoDishCard from './components/ZomatoDishCard';
+import MenuSkeleton from './components/MenuSkeleton';
+import ErrorAlert from './components/ErrorAlert';
+import VideoModal from './components/VideoModal';
+import ImagePreviewModal from './components/ImagePreviewModal';
+import ProfileModal from './components/ProfileModal';
+import { UserProfile, getCurrentUser } from './services/authService';
+import { SearchX, ArrowUp, Sparkles, Play, Flame, Zap, CheckCircle2, MapPin } from 'lucide-react';
 
-export default function App() {
-  const [isAdmin, setIsAdmin] = React.useState<boolean>(false);
-  const [showLoginModal, setShowLoginModal] = React.useState<boolean>(false);
+export const App: React.FC = () => {
+  const [items, setItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState<string>('');
+  const [fromCache, setFromCache] = useState<boolean>(false);
 
-  // Customer Auth States
-  const [currentCustomer, setCurrentCustomer] = React.useState<Customer | null>(() => {
-    const saved = localStorage.getItem('localmart_grocery_customer');
-    return saved ? JSON.parse(saved) : null;
+  // User Profile & Authentication State
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => getCurrentUser());
+  const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
+
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'reels' | 'popular' | 'fast'>('all');
+  const [vegOnly, setVegOnly] = useState<boolean>(true);
+  const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
+
+  // Video modal state
+  const [videoModal, setVideoModal] = useState<{ isOpen: boolean; url: string; name: string }>({
+    isOpen: false,
+    url: '',
+    name: '',
   });
-  const [showCustomerAuthModal, setShowCustomerAuthModal] = React.useState<boolean>(false);
-  const [showCustomerAccountModal, setShowCustomerAccountModal] = React.useState<boolean>(false);
-  const [customerAuthInitialMode, setCustomerAuthInitialMode] = React.useState<'login' | 'signup'>('signup');
 
-  // Top and Bottom Popup states
-  const [showTopBanner, setShowTopBanner] = React.useState<boolean>(true);
-  const [showBottomPopup, setShowBottomPopup] = React.useState<boolean>(true);
-  const [copiedText, setCopiedText] = React.useState<string | null>(null);
+  // Image preview modal state
+  const [previewModal, setPreviewModal] = useState<{ isOpen: boolean; url: string; name: string }>({
+    isOpen: false,
+    url: '',
+    name: '',
+  });
 
-  const [searchQuery, setSearchQuery] = React.useState<string>('');
-  const [selectedCategory, setSelectedCategory] = React.useState<string>('All');
-  const [selectedProductId, setSelectedProductId] = React.useState<string | null>(null);
-  
-  // Data State managed purely locally
-  const [products, setProducts] = React.useState<Product[]>(() => {
-    const saved = localStorage.getItem('localmart_grocery_products');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error parsing products from localstorage:', e);
-      }
+  // Fetch menu data from Google Sheet
+  const loadMenu = useCallback(async (isManualRefresh = false) => {
+    if (isManualRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setLoading(true);
     }
-    // Seed and return default products list
-    localStorage.setItem('localmart_grocery_products', JSON.stringify(ALL_PRODUCTS));
-    return ALL_PRODUCTS;
-  });
+    setError(null);
 
-  const [orders, setOrders] = React.useState<Order[]>(() => {
-    const saved = localStorage.getItem('localmart_grocery_orders');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error parsing orders from localstorage:', e);
-      }
-    }
-    return [];
-  });
-
-  // Since we are running fully local and offline-first, states are loaded instantly!
-  const [isLoading, setIsLoading] = React.useState<boolean>(false);
-  const [hasLoadedOnce, setHasLoadedOnce] = React.useState<boolean>(true);
-  const [error, setError] = React.useState<string | null>(null);
-
-  // Cart & Pincode Local Persistence
-  const [cart, setCart] = React.useState<{ [productId: string]: number }>(() => {
-    const saved = localStorage.getItem('localmart_grocery_cart');
-    return saved ? JSON.parse(saved) : {};
-  });
-
-  const [pincode, setPincode] = React.useState<string>(() => {
-    const saved = localStorage.getItem('localmart_grocery_pincode');
-    return saved || '110001';
-  });
-
-  const [isCartOpen, setIsCartOpen] = React.useState<boolean>(false);
-
-  // Sync cart and pincode to localStorage
-  React.useEffect(() => {
-    localStorage.setItem('localmart_grocery_cart', JSON.stringify(cart));
-  }, [cart]);
-
-  React.useEffect(() => {
-    localStorage.setItem('localmart_grocery_pincode', pincode);
-  }, [pincode]);
-
-  // Dummy fetch handlers to keep components happy without breaking anything
-  const fetchProducts = async (currentSearch: string = '', cat: string = 'All') => {
-    // Declarative filtering is handled automatically!
-  };
-
-  const fetchOrders = async () => {
-    // Orders are kept synchronized in the local React state!
-  };
-
-  // Clear selected product when search or category changes so we return to catalog
-  React.useEffect(() => {
-    setSelectedProductId(null);
-  }, [searchQuery, selectedCategory]);
-
-  // Cart operations
-  const handleAddToCart = (product: Product) => {
-    setCart((prev) => {
-      const currentQty = prev[product.id] || 0;
-      if (currentQty >= product.stock) {
-        alert(`Cannot add more. Only ${product.stock} units are currently in stock!`);
-        return prev;
-      }
-      return {
-        ...prev,
-        [product.id]: currentQty + 1,
-      };
-    });
-  };
-
-  const handleRemoveFromCart = (product: Product) => {
-    setCart((prev) => {
-      const currentQty = prev[product.id] || 0;
-      if (currentQty <= 1) {
-        const copy = { ...prev };
-        delete copy[product.id];
-        return copy;
-      }
-      return {
-        ...prev,
-        [product.id]: currentQty - 1,
-      };
-    });
-  };
-
-  const handleClearCart = () => {
-    setCart({});
-  };
-
-  // Convert cart state dict to structured CartItem list
-  const cartItems: CartItem[] = React.useMemo(() => {
-    return Object.keys(cart).map((productId) => {
-      const product = products.find((p) => p.id === productId);
-      return product ? { product, quantity: cart[productId] } : null;
-    }).filter(Boolean) as CartItem[];
-  }, [cart, products]);
-
-  const cartCount = React.useMemo(() => {
-    return Object.keys(cart).reduce((sum, key) => sum + (cart[key] || 0), 0);
-  }, [cart]);
-
-  // --- Client-Side State API handlers ---
-
-  // --- Customer State Handlers ---
-  const handleCustomerAuthSuccess = (customer: Customer) => {
-    setCurrentCustomer(customer);
-    localStorage.setItem('localmart_grocery_customer', JSON.stringify(customer));
-    if (customer.pincode) {
-      setPincode(customer.pincode);
-    }
-  };
-
-  const handleCustomerLogout = () => {
-    setCurrentCustomer(null);
-    localStorage.removeItem('localmart_grocery_customer');
-  };
-
-  // 1. Checkout (Fully Localized)
-  const handleCheckout = async (orderData: {
-    customerName: string;
-    customerPhone: string;
-    customerAddress: string;
-    deliveryType: 'delivery' | 'pickup';
-  }) => {
-    const orderItems: OrderItem[] = cartItems.map((item) => ({
-      id: item.product.id,
-      name: item.product.name,
-      unit: item.product.unit,
-      price: item.product.price,
-      quantity: item.quantity,
-      image: item.product.image,
-    }));
-
-    const newOrder: Order = {
-      id: 'order-' + Date.now(),
-      customerName: orderData.customerName,
-      customerPhone: orderData.customerPhone,
-      customerAddress: orderData.customerAddress,
-      deliveryType: orderData.deliveryType,
-      status: 'Pending',
-      items: orderItems,
-      totalAmount: cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
-      savings: cartItems.reduce((sum, item) => sum + (item.product.originalPrice - item.product.price) * item.quantity, 0),
-      createdAt: new Date().toISOString(),
-    };
-
-    // Deduct stock levels of products locally
-    const updatedProducts = products.map((prod) => {
-      const cartItem = cartItems.find((item) => item.product.id === prod.id);
-      if (cartItem) {
-        return {
-          ...prod,
-          stock: Math.max(0, prod.stock - cartItem.quantity),
-        };
-      }
-      return prod;
-    });
-
-    setProducts(updatedProducts);
-    localStorage.setItem('localmart_grocery_products', JSON.stringify(updatedProducts));
-
-    const updatedOrders = [newOrder, ...orders];
-    setOrders(updatedOrders);
-    localStorage.setItem('localmart_grocery_orders', JSON.stringify(updatedOrders));
-
-    return newOrder;
-  };
-
-  // 2. Add New Product (Fully Localized)
-  const handleAddProduct = async (productData: Omit<Product, 'id'>) => {
-    const newProduct: Product = {
-      ...productData,
-      id: 'prod-' + Date.now(),
-    };
-
-    const updatedProducts = [newProduct, ...products];
-    setProducts(updatedProducts);
-    localStorage.setItem('localmart_grocery_products', JSON.stringify(updatedProducts));
-
-    return newProduct;
-  };
-
-  // 3. Update Existing Product (Fully Localized)
-  const handleUpdateProduct = async (productId: string, updatedFields: Partial<Product>) => {
-    const updatedProducts = products.map((p) => (p.id === productId ? { ...p, ...updatedFields } : p));
-    setProducts(updatedProducts);
-    localStorage.setItem('localmart_grocery_products', JSON.stringify(updatedProducts));
-
-    return updatedProducts.find((p) => p.id === productId)!;
-  };
-
-  // 4. Update Product Image (Directly from Card / Catalog View)
-  const handleUpdateProductImage = async (productId: string, base64Image: string) => {
     try {
-      await handleUpdateProduct(productId, { image: base64Image });
+      const result = await fetchMenuData();
+      setItems(result.items);
+      setLastSyncedTime(result.timestamp);
+      setFromCache(result.fromCache);
     } catch (err: any) {
-      alert('Photo update failed: ' + err.message);
+      console.error('Failed to load menu data:', err);
+      setError(err?.message || 'Could not connect to Google Sheets. Please verify connection.');
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
     }
+  }, []);
+
+  useEffect(() => {
+    loadMenu();
+  }, [loadMenu]);
+
+  // Track scroll position for "Back to top" button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 5. Delete Product (Fully Localized)
-  const handleDeleteProduct = async (productId: string) => {
-    const updatedProducts = products.filter((p) => p.id !== productId);
-    setProducts(updatedProducts);
-    localStorage.setItem('localmart_grocery_products', JSON.stringify(updatedProducts));
+  // Distinct categories in the order they appear
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    items.forEach((item) => {
+      if (item.category) set.add(item.category);
+    });
+    return Array.from(set);
+  }, [items]);
 
-    // Remove from cart if it was deleted
-    if (cart[productId]) {
-      setCart((prev) => {
-        const copy = { ...prev };
-        delete copy[productId];
-        return copy;
-      });
+  // Spotlight items for the Horizontal Scroll Row (Hand-picked diverse highlights)
+  const spotlightItems = useMemo(() => {
+    if (items.length === 0) return [];
+    // Prioritize items with videos or special notes, or top signature items
+    const withVideos = items.filter((i) => i.videoUrl && i.videoUrl.trim().length > 0);
+    const signaturePicks = items.filter(
+      (i) =>
+        i.name.toLowerCase().includes('pizza') ||
+        i.name.toLowerCase().includes('burger') ||
+        i.name.toLowerCase().includes('shake') ||
+        i.name.toLowerCase().includes('mojito') ||
+        i.name.toLowerCase().includes('coffee')
+    );
+
+    const combined = [...withVideos, ...signaturePicks];
+    const uniqueIds = new Set<number>();
+    const result: MenuItem[] = [];
+
+    for (const item of combined) {
+      if (!uniqueIds.has(item.id)) {
+        uniqueIds.add(item.id);
+        result.push(item);
+      }
+      if (result.length >= 10) break;
     }
-  };
 
-  // 6. Update Order Status (Fully Localized)
-  const handleUpdateOrderStatus = async (orderId: string, status: Order['status']) => {
-    const updatedOrders = orders.map((o) => (o.id === orderId ? { ...o, status } : o));
-    setOrders(updatedOrders);
-    localStorage.setItem('localmart_grocery_orders', JSON.stringify(updatedOrders));
+    return result.length > 0 ? result : items.slice(0, 8);
+  }, [items]);
 
-    return updatedOrders.find((o) => o.id === orderId)!;
-  };
-
-  // 7. Reset entire Database to Default pre-populated list (Fully Localized)
-  const handleResetDatabase = async () => {
-    localStorage.setItem('localmart_grocery_products', JSON.stringify(ALL_PRODUCTS));
-    localStorage.setItem('localmart_grocery_orders', JSON.stringify([]));
-    setProducts(ALL_PRODUCTS);
-    setOrders([]);
-    setCart({});
-    return { products: ALL_PRODUCTS };
-  };
-
-  // Filtering products locally for search and categories
-  const filteredDisplayProducts = React.useMemo(() => {
-    return products.filter((p) => {
+  // Filtered items based on Category, Search Query, and Quick Chips
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
       // Category filter
-      if (selectedCategory !== 'All' && p.category !== selectedCategory) {
+      if (selectedCategory !== 'All' && item.category !== selectedCategory) {
         return false;
       }
-      // Search query filter
-      if (searchQuery.trim() !== '') {
-        const query = searchQuery.toLowerCase();
-        const matchName = p.name.toLowerCase().includes(query);
-        const matchDesc = p.description && p.description.toLowerCase().includes(query);
-        const matchCategory = p.category.toLowerCase().includes(query);
-        return matchName || matchDesc || matchCategory;
+
+      // Quick chip filter
+      if (activeFilter === 'reels' && (!item.videoUrl || item.videoUrl.trim().length === 0)) {
+        return false;
       }
+      if (activeFilter === 'popular' && item.id % 2 !== 0 && !item.videoUrl) {
+        return false;
+      }
+
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const matchesName = item.name.toLowerCase().includes(query);
+        const matchesCategory = item.category.toLowerCase().includes(query);
+        const matchesNotes = item.notes ? item.notes.toLowerCase().includes(query) : false;
+        return matchesName || matchesCategory || matchesNotes;
+      }
+
       return true;
     });
-  }, [products, selectedCategory, searchQuery]);
+  }, [items, selectedCategory, searchQuery, activeFilter]);
+
+  // Group items by category when in 'All' view and not searching / filter active
+  const groupedItems = useMemo(() => {
+    if (selectedCategory !== 'All' || searchQuery.trim().length > 0 || activeFilter !== 'all') {
+      return null;
+    }
+
+    const groups: { category: string; items: MenuItem[] }[] = [];
+    categories.forEach((cat) => {
+      const catItems = items.filter((item) => item.category === cat);
+      if (catItems.length > 0) {
+        groups.push({ category: cat, items: catItems });
+      }
+    });
+    return groups;
+  }, [items, selectedCategory, searchQuery, activeFilter, categories]);
+
+  const handleOpenVideo = (videoUrl: string, itemName: string) => {
+    setVideoModal({
+      isOpen: true,
+      url: videoUrl,
+      name: itemName,
+    });
+  };
+
+  const handleCloseVideo = () => {
+    setVideoModal((prev) => ({ ...prev, isOpen: false }));
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-800 relative" id="localmart-app">
-      
-      {/* Low-Opacity Storefront Background Watermark across the entire website */}
-      <div 
-        className="fixed inset-0 pointer-events-none opacity-[0.03] z-0 bg-repeat bg-center" 
-        style={{ 
-          backgroundImage: `url(${storefrontImg})`,
-          backgroundSize: '380px',
-        }}
-      />
-      <Navbar
-        isAdmin={isAdmin}
-        setIsAdmin={(val) => {
-          if (val) {
-            setShowLoginModal(true);
-          } else {
-            setIsAdmin(false);
-          }
-        }}
-        cartCount={cartCount}
-        onOpenCart={() => setIsCartOpen(true)}
-        currentPincode={pincode}
-        setPincode={setPincode}
-        currentCustomer={currentCustomer}
-        onOpenAuth={() => {
-          setCustomerAuthInitialMode('signup');
-          setShowCustomerAuthModal(true);
-        }}
-        onLogout={handleCustomerLogout}
-        onOpenAccount={() => setShowCustomerAccountModal(true)}
+    <div className="min-h-screen flex flex-col bg-stone-50 text-stone-900 selection:bg-rose-100 selection:text-rose-900">
+      {/* 1. Zomato Top Header (Brand, Location, Search Bar, Profile Action) */}
+      <ZomatoHeader
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        currentUser={currentUser}
+        onOpenProfile={() => setIsProfileOpen(true)}
       />
 
-      {/* Main Container */}
-      <main className="flex-grow">
-        
-        {/* Loading Spinner */}
-        {isLoading && products.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20" id="main-loading-spinner">
-            <RefreshCw className="h-10 w-10 text-emerald-700 animate-spin mb-4" />
-            <p className="text-sm font-semibold text-gray-500">Connecting to Bari' All-In-One Mart local servers...</p>
-          </div>
+      {/* 2. Zomato Banner (Promotional Gold / Cafe Delights Banner) */}
+      <div className="max-w-7xl mx-auto w-full px-3.5 sm:px-6">
+        <ZomatoBanner />
+      </div>
+
+      {/* 3. Circular Category Bar (Side-scrollable circular dish avatars with active indicator) */}
+      {!loading && !error && items.length > 0 && (
+        <CircularCategoryBar
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={(cat) => {
+            setSelectedCategory(cat);
+            setActiveFilter('all');
+          }}
+        />
+      )}
+
+      {/* 4. Quick Filter Chips (Zomato-style Pill Filters) */}
+      {!loading && !error && items.length > 0 && (
+        <div className="max-w-7xl mx-auto w-full px-3.5 sm:px-6 mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+          <button
+            type="button"
+            onClick={() => setActiveFilter('all')}
+            className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              activeFilter === 'all'
+                ? 'bg-stone-900 text-white shadow-xs'
+                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>All Items</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter('reels')}
+            className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              activeFilter === 'reels'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+            }`}
+          >
+            <Play className="w-3.5 h-3.5 fill-current text-rose-500" />
+            <span>With Video Reels</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter('popular')}
+            className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              activeFilter === 'popular'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+            <span>Chef's Choice</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter('fast')}
+            className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              activeFilter === 'fast'
+                ? 'bg-emerald-700 text-white shadow-xs'
+                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" />
+            <span>Near & Fast</span>
+          </button>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-3.5 sm:px-6 py-4">
+        {/* Loading Skeleton */}
+        {loading && <MenuSkeleton />}
+
+        {/* Error State */}
+        {!loading && error && (
+          <ErrorAlert
+            message={error}
+            onRetry={() => loadMenu(false)}
+            isRetrying={loading || isRefreshing}
+          />
         )}
 
-        {/* Database Error Banner */}
-        {error && (
-          <div className="max-w-xl mx-auto my-12 p-6 bg-rose-50 border border-rose-200 rounded-lg text-center" id="main-error-banner">
-            <AlertTriangle className="h-12 w-12 text-rose-500 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-gray-800">Connection Failed</h3>
-            <p className="text-sm text-gray-500 mt-1 mb-4">{error}</p>
-            <button
-              onClick={() => fetchProducts(searchQuery, selectedCategory)}
-              className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold rounded shadow transition"
-            >
-              Retry Connection
-            </button>
-          </div>
+        {/* 5. SIDE SCROLL (HORIZONTAL SCROLL): RECOMMENDED FOR YOU */}
+        {!loading && !error && !searchQuery && selectedCategory === 'All' && activeFilter === 'all' && (
+          <HorizontalDishesRow
+            title="Recommended For You"
+            subtitle="Side scroll to explore hand-crafted chef specialties & popular cafe favorites"
+            items={spotlightItems}
+            onOpenVideo={handleOpenVideo}
+            onPreviewImage={(url, name) => setPreviewModal({ isOpen: true, url, name })}
+          />
         )}
 
-        {/* Dynamic Role view content */}
-        {!error && hasLoadedOnce && (
-          <>
-            {isAdmin ? (
-              <AdminPanel
-                products={products}
-                orders={orders}
-                onAddProduct={handleAddProduct}
-                onUpdateProduct={handleUpdateProduct}
-                onDeleteProduct={handleDeleteProduct}
-                onUpdateOrderStatus={handleUpdateOrderStatus}
-                onResetDatabase={handleResetDatabase}
-                onExitAdmin={() => setIsAdmin(false)}
-              />
-            ) : selectedProductId && products.find((p) => p.id === selectedProductId) ? (
-              <ProductDetailView
-                product={products.find((p) => p.id === selectedProductId)!}
-                allProducts={products}
-                cart={cart}
-                onAddToCart={handleAddToCart}
-                onRemoveFromCart={handleRemoveFromCart}
-                onUpdateProductImage={handleUpdateProductImage}
-                onBack={() => setSelectedProductId(null)}
-                onSelectProduct={(id) => setSelectedProductId(id)}
-                pincode={pincode}
-                isAdmin={isAdmin}
-              />
-            ) : (
-              <GroceryCatalog
-                products={filteredDisplayProducts}
-                selectedCategory={selectedCategory}
-                setSelectedCategory={setSelectedCategory}
-                cart={cart}
-                onAddToCart={handleAddToCart}
-                onRemoveFromCart={handleRemoveFromCart}
-                onUpdateProductImage={handleUpdateProductImage}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                onProductClick={(product) => setSelectedProductId(product.id)}
-                isAdmin={isAdmin}
-              />
-            )}
-          </>
-        )}
-
-      </main>
-
-      {/* Footer Section */}
-      <footer className="bg-gray-900 text-gray-400 py-10 mt-16 font-sans border-t border-gray-800" id="store-footer">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
-          
-          <div className="space-y-3">
-            <h4 className="text-white font-extrabold text-base tracking-tight italic">
-              Bari' <span className="text-emerald-400 font-extrabold not-italic ml-1">All-In-One Mart</span>
-            </h4>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              Your neighborhood local premium multi-department grocery outlet, powered by advanced client-side processing. Pick from fresh fruits, organic staples, milk, paneer, and sweets.
+        {/* Empty State */}
+        {!loading && !error && filteredItems.length === 0 && (
+          <div className="text-center py-16 px-4 bg-white border border-stone-200 rounded-3xl max-w-md mx-auto shadow-xs my-8">
+            <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4">
+              <SearchX className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg font-bold text-stone-900 mb-1">
+              No Dishes Found
+            </h3>
+            <p className="text-xs sm:text-sm text-stone-500 mb-6 leading-relaxed">
+              We couldn't find any dishes matching your selection. Try clearing your search or filter.
             </p>
-          </div>
-
-          <div>
-            <h4 className="text-white font-extrabold text-xs uppercase tracking-widest mb-3">Store Categories</h4>
-            <ul className="space-y-1.5 text-xs">
-              <li><button onClick={() => { setIsAdmin(false); setSelectedCategory('Fruits & Vegetables'); }} className="hover:text-white hover:underline transition text-left">Fruits & Vegetables</button></li>
-              <li><button onClick={() => { setIsAdmin(false); setSelectedCategory('Dairy & Eggs'); }} className="hover:text-white hover:underline transition text-left">Dairy & Eggs</button></li>
-              <li><button onClick={() => { setIsAdmin(false); setSelectedCategory('Pantry & Staples'); }} className="hover:text-white hover:underline transition text-left">Pantry & Staples</button></li>
-              <li><button onClick={() => { setIsAdmin(false); setSelectedCategory('Electronics'); }} className="hover:text-white hover:underline transition text-left">Electronics & Chargers</button></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-white font-extrabold text-xs uppercase tracking-widest mb-3">Customer Service & Location</h4>
-            <ul className="space-y-2 text-xs text-gray-400">
-              <li>Store Location: <strong className="text-white font-medium block mt-0.5">Bari' All-In-One Mart - Premium natural, organic & daily needs local grocery.</strong></li>
-              <li className="flex flex-col gap-0.5">
-                <span>Call Support:</span>
-                <a href="tel:+917500236520" className="text-yellow-400 font-extrabold hover:underline text-sm font-mono">+91 75002 36520</a>
-              </li>
-              <li className="flex flex-col gap-0.5">
-                <span>WhatsApp Support:</span>
-                <a href="https://wa.me/917500236520" target="_blank" rel="noopener noreferrer" className="text-emerald-400 font-extrabold hover:underline text-sm font-mono">+91 75002 36520</a>
-              </li>
-              <li>Pincode Checker: <strong className="text-yellow-400 font-mono">{pincode}</strong></li>
-              <li>Secure SSL Checkouts</li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-white font-extrabold text-xs uppercase tracking-widest mb-3">Capacity info</h4>
-            <p className="text-xs text-gray-400 leading-relaxed mb-2">
-              Supports scalable local inventory management up to approximately <strong>2000 active items</strong> with instant base64 custom photo uploads.
-            </p>
-            <div className="inline-flex items-center gap-1.5 text-[10px] bg-gray-800 text-yellow-400 font-bold px-2.5 py-1 rounded border border-gray-700 font-mono">
-              💾 LOCAL SECURE DATABASE ACTIVE
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="px-4 py-2 rounded-xl bg-rose-600 text-white font-bold text-xs shadow-xs hover:bg-rose-700 transition-all cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              )}
+              {selectedCategory !== 'All' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory('All')}
+                  className="px-4 py-2 rounded-xl bg-stone-900 text-white font-bold text-xs shadow-xs hover:bg-stone-800 transition-all cursor-pointer"
+                >
+                  Show All Categories
+                </button>
+              )}
             </div>
           </div>
+        )}
 
-        </div>
+        {/* 6. VERTICAL SCROLL: DISHES FEED (By Category or Filtered Grid) */}
+        {!loading && !error && filteredItems.length > 0 && (
+          <div className="my-6">
+            {/* If All Categories are selected & no active search/chip: Display categorized vertical sections */}
+            {groupedItems ? (
+              <div className="space-y-12">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-stone-200">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-stone-900"></span>
+                    <h2 className="text-base sm:text-lg font-black uppercase tracking-tight text-stone-900">
+                      Explore Full Menu
+                    </h2>
+                  </div>
+                  <span className="text-xs text-stone-400 font-semibold">
+                    Scroll down for all categories
+                  </span>
+                </div>
 
-        <div className="max-w-7xl mx-auto px-4 md:px-8 border-t border-gray-800 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 gap-4">
-          <p>© 2026 Bari' All-In-One Mart Local Grocery Partner. All rights reserved.</p>
-          <div className="flex gap-4">
-            <span className="hover:text-gray-400 cursor-pointer">Privacy Policy</span>
-            <span className="hover:text-gray-400 cursor-pointer">Terms of Use</span>
-            <span 
-              onClick={() => {
-                if (isAdmin) {
-                  setIsAdmin(false);
-                } else {
-                  setShowLoginModal(true);
-                }
-              }} 
-              className="hover:text-gray-400 cursor-pointer text-yellow-400 font-bold"
-            >
-              Admin Login
+                {groupedItems.map((group) => {
+                  const icon = getCategoryIcon(group.category);
+                  return (
+                    <section
+                      key={group.category}
+                      id={`section-${group.category.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+                      className="scroll-mt-24"
+                    >
+                      {/* Section Header */}
+                      <div className="flex items-center justify-between pb-2 mb-4 border-b border-stone-200/90">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-xl p-1 rounded-lg bg-stone-100 border border-stone-200">
+                            {icon}
+                          </span>
+                          <div>
+                            <h3 className="text-lg sm:text-xl font-black text-stone-900 font-display">
+                              {group.category}
+                            </h3>
+                            <p className="text-xs text-stone-500 font-medium">
+                              Fresh cafe delicacies
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCategory(group.category)}
+                          className="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1 rounded-full transition-colors cursor-pointer"
+                        >
+                          View Only {group.category}
+                        </button>
+                      </div>
+
+                      {/* Items Grid (Vertically Scrolling) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+                        {group.items.map((item) => (
+                          <ZomatoDishCard
+                            key={item.id}
+                            item={item}
+                            onOpenVideo={handleOpenVideo}
+                            onPreviewImage={(url, name) =>
+                              setPreviewModal({ isOpen: true, url, name })
+                            }
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Flat Grid when filtered by category, search, or chip */
+              <div>
+                <div className="flex items-center justify-between mb-5 pb-3 border-b border-stone-200">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">
+                      {getCategoryIcon(selectedCategory)}
+                    </span>
+                    <h2 className="text-xl sm:text-2xl font-black text-stone-900 font-display">
+                      {selectedCategory === 'All'
+                        ? searchQuery
+                          ? `Results for "${searchQuery}"`
+                          : 'Special Filtered Dishes'
+                        : selectedCategory}
+                    </h2>
+                  </div>
+
+                  {selectedCategory !== 'All' && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCategory('All')}
+                      className="text-xs font-bold text-stone-600 hover:text-stone-900 bg-white border border-stone-200 px-3 py-1 rounded-full transition-all cursor-pointer shadow-2xs"
+                    >
+                      Show All Categories
+                    </button>
+                  )}
+                </div>
+
+                {/* Vertically Scrolling Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+                  {filteredItems.map((item) => (
+                    <ZomatoDishCard
+                      key={item.id}
+                      item={item}
+                      onOpenVideo={handleOpenVideo}
+                      onPreviewImage={(url, name) =>
+                        setPreviewModal({ isOpen: true, url, name })
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-stone-200 mt-12 py-8 text-center text-xs text-stone-500">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col items-center gap-2.5">
+          <div className="flex items-center gap-2 font-bold text-stone-800 text-sm">
+            <span>Friends 4 Ever Coffee Cafe</span>
+            <span>•</span>
+            <span className="text-emerald-600 flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              100% Pure Veg
             </span>
           </div>
+
+          {/* Clickable Address Link to Google Maps */}
+          <a
+            href={GOOGLE_MAPS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`View on Google Maps: ${CAFE_FULL_ADDRESS}`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-700 hover:text-rose-600 transition-colors text-xs font-medium max-w-xl text-center"
+          >
+            <MapPin className="w-3.5 h-3.5 text-rose-600 flex-shrink-0" />
+            <span className="truncate">{CAFE_FULL_ADDRESS}</span>
+            <span className="text-rose-600 font-bold ml-1">Open in Maps ↗</span>
+          </a>
+
+          <p className="text-stone-400 text-[11px]">
+            Live Digital Menu connected with Google Sheets • Real-time Updates
+          </p>
+          <p className="text-stone-400 text-[11px] mt-0.5">
+            © {new Date().getFullYear()} Friends 4 Ever Coffee Cafe. All rights reserved.
+          </p>
         </div>
       </footer>
 
-      {/* Cart Sidebar drawer */}
-      <CartSidebar
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        cartItems={cartItems}
-        onAddToCart={handleAddToCart}
-        onRemoveFromCart={handleRemoveFromCart}
-        onClearCart={handleClearCart}
-        onCheckout={handleCheckout}
-        currentCustomer={currentCustomer}
-      />
-
-      {/* Admin Login Modal */}
-      <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={() => setIsAdmin(true)}
-      />
-
-      {/* Customer Registration and Authentication Modal */}
-      <CustomerAuthModal
-        isOpen={showCustomerAuthModal}
-        onClose={() => setShowCustomerAuthModal(false)}
-        onAuthSuccess={handleCustomerAuthSuccess}
-        initialMode={customerAuthInitialMode}
-      />
-
-      {/* Customer Profile & Transaction Dashboard */}
-      <CustomerAccountModal
-        isOpen={showCustomerAccountModal}
-        onClose={() => setShowCustomerAccountModal(false)}
-        currentCustomer={currentCustomer}
-        onUpdateProfile={handleCustomerAuthSuccess}
-      />
-
-      {/* Interactive WhatsApp Help desk Corner Widget */}
-      <WhatsAppWidget currentCustomer={currentCustomer} />
-
-      {/* Bottom Promotion/Name Announcement Popup */}
-      {showBottomPopup && (
-        <motion.div
-          initial={{ y: 120, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 120, opacity: 0 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 180, delay: 0.8 }}
-          className="fixed bottom-24 right-6 md:right-8 z-40 max-w-sm bg-white rounded-xl shadow-2xl p-5 border border-emerald-100 flex flex-col gap-3 font-sans text-gray-800"
-          id="bottom-announcement-popup"
+      {/* Floating Back to Top Button */}
+      {showScrollTop && (
+        <button
+          id="btn-scroll-top"
+          type="button"
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-40 p-3 rounded-full bg-rose-600 text-white shadow-lg hover:bg-rose-700 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+          title="Back to top"
+          aria-label="Back to top"
         >
-          {/* Downward pointing arrow directly above the WhatsApp button */}
-          <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-red-500 border-r border-b border-red-500 rotate-45" />
-
-          <div className="flex items-start justify-between gap-2 relative z-10">
-            <div className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-lg animate-pulse">
-                🏪
-              </div>
-              <div>
-                <h4 className="text-sm font-black text-gray-900 leading-tight">
-                  Bari' All-In-One Mart
-                </h4>
-                <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wide">
-                  Now Live in Your Pincode
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                setShowBottomPopup(false);
-              }}
-              className="text-gray-400 hover:text-gray-600 font-extrabold text-lg -mt-1 focus:outline-none"
-              title="Dismiss promotion"
-            >
-              &times;
-            </button>
-          </div>
-
-          <p className="text-xs text-gray-600 leading-relaxed relative z-10">
-            Welcome to the newly launched <strong className="text-emerald-800 font-bold">Bari' All-In-One Mart</strong>! We supply direct-from-farm fresh fruits, organic daily staples, dairy, milk, paneer, and sweets. Enjoy flat ₹50 discount on your first checkout.
-          </p>
-
-          <div className="flex items-center justify-between gap-3 border-t pt-3 mt-1 relative z-10">
-            <div className="text-[11px] text-gray-500">
-              Delivery to <strong className="font-mono text-emerald-700 font-extrabold">{pincode}</strong>
-            </div>
-            <div className="flex gap-1.5">
-              <button
-                onClick={() => {
-                  setShowBottomPopup(false);
-                }}
-                className="px-2.5 py-1.5 text-[11px] font-bold text-gray-500 hover:bg-gray-100 rounded transition"
-              >
-                Dismiss
-              </button>
-              <button
-                onClick={() => {
-                  if (!currentCustomer) {
-                    setCustomerAuthInitialMode('signup');
-                    setShowCustomerAuthModal(true);
-                  } else {
-                    setIsCartOpen(true);
-                  }
-                }}
-                className="px-3 py-1.5 text-[11px] font-extrabold text-white bg-emerald-850 hover:bg-emerald-950 rounded transition shadow"
-              >
-                {!currentCustomer ? 'Register & Save' : 'Shop Now'}
-              </button>
-            </div>
-          </div>
-        </motion.div>
+          <ArrowUp className="w-5 h-5" />
+        </button>
       )}
 
+      {/* Video / Reel Player Modal */}
+      <VideoModal
+        isOpen={videoModal.isOpen}
+        videoUrl={videoModal.url}
+        itemName={videoModal.name}
+        onClose={handleCloseVideo}
+      />
+
+      {/* Image Zoom Preview Modal */}
+      <ImagePreviewModal
+        isOpen={previewModal.isOpen}
+        imageUrl={previewModal.url}
+        itemName={previewModal.name}
+        onClose={() => setPreviewModal({ isOpen: false, url: '', name: '' })}
+      />
+
+      {/* User Profile, Sign Up & Login Modal */}
+      <ProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        currentUser={currentUser}
+        onAuthSuccess={(user) => {
+          setCurrentUser(user);
+          if (user) {
+            // keep open brief moment or close
+            setTimeout(() => {
+              setIsProfileOpen(false);
+            }, 700);
+          }
+        }}
+      />
     </div>
   );
-}
+};
+
+export default App;

@@ -26,6 +26,24 @@ let customersList: any[] = [];
    API Endpoints (Fully Local / In-Memory)
    ------------------------------------------- */
 
+// 0. Dynamic Google Sheet Menu endpoint
+const GOOGLE_SHEET_MENU_URL = 'https://docs.google.com/spreadsheets/d/1qVLdRKkLlQHDKtC7iZr4O1E-wSpNAjXzEssM-Zsb4og/gviz/tq?tqx=out:json&sheet=Menudata';
+
+app.get('/api/menu', async (req, res) => {
+  try {
+    const response = await fetch(GOOGLE_SHEET_MENU_URL);
+    if (!response.ok) {
+      throw new Error(`Google Sheets responded with status ${response.status}`);
+    }
+    const rawText = await response.text();
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.send(rawText);
+  } catch (err: any) {
+    console.error('Error fetching Google Sheet menu:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch menu from Google Sheets' });
+  }
+});
+
 // 1. Get products (with filtering, searching, and admin controls)
 app.get('/api/products', (req, res) => {
   try {

@@ -4,7 +4,7 @@ export const ALL_PRODUCTS: Product[] = [
   // ==================== FRUITS & VEGETABLES ====================
   {
     id: 'prod-1',
-    name: chocolate 
+    name: 'Chocolate',
     category: 'snacks',
     price: 40,
     originalPrice: 50,

@@ -1,6 +1,6 @@
 {
-  "name": "Bari' All-In-One Mart",
-  "description": "An e-commerce storefront like Flipkart for local grocery shops. Supports inventory management, order tracking, search, cart operations, and image upload.",
-  "requestFramePermissions": ["camera", "microphone"],
+  "name": "Friends 4 Ever Coffee Cafe",
+  "description": "Digital menu for Friends 4 Ever Coffee Cafe fetching dynamic items and pricing from Google Sheets with live search, category filters, smart pricing badges, and reel previews.",
+  "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

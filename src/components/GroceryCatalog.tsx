@@ -22,6 +22,7 @@ interface GroceryCatalogProps {
   setSearchQuery: (query: string) => void;
   onProductClick?: (product: Product) => void;
   isAdmin?: boolean;
+  onOpenRestaurant?: () => void;
 }
 
 export default function GroceryCatalog({
@@ -36,6 +37,7 @@ export default function GroceryCatalog({
   setSearchQuery,
   onProductClick,
   isAdmin = false,
+  onOpenRestaurant,
 }: GroceryCatalogProps) {
   const [sortBy, setSortBy] = React.useState<'popular' | 'priceAsc' | 'priceDesc' | 'discount'>('popular');
   const fileInputRefs = React.useRef<{ [key: string]: HTMLInputElement | null }>({});
@@ -516,12 +518,12 @@ export default function GroceryCatalog({
       {/* Majestic Centered Google-Style Search Form */}
       <div className="max-w-2xl mx-auto mb-10 mt-2 text-center" id="google-search-section">
         {/* Brand subtitle matching Google Search Home */}
-        <div className="flex items-center justify-center gap-2 mb-4 select-none">
-          <span className="text-3xl md:text-4xl font-extrabold tracking-tight font-sans italic bg-gradient-to-r from-emerald-800 via-emerald-600 to-yellow-500 bg-clip-text text-transparent">
-            Bari' All-In-One Mart
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-4 select-none">
+          <span className="text-3xl md:text-4xl font-black tracking-tight font-sans animate-shimmer-text">
+            Manish Royal
           </span>
-          <span className="text-xs bg-yellow-100 text-yellow-800 font-black px-3 py-0.5 rounded-full font-mono uppercase tracking-wider">
-            Premium
+          <span className="text-xs bg-emerald-900 text-yellow-300 font-extrabold px-3 py-1 rounded-full uppercase tracking-wider border border-yellow-400/40 shadow-xs animate-glow-badge">
+            Web Designer • Animated UI
           </span>
         </div>
         
@@ -1080,19 +1082,29 @@ export default function GroceryCatalog({
               </div>
             </div>
 
-            {/* Support Phone & Contact Button */}
+            {/* Support Phone, WhatsApp & Restaurant Button */}
             <div className="mt-5 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
               <div className="text-[11px] text-slate-400">
                 Opening Hours: <strong className="text-slate-200 font-medium">08:00 AM — 10:00 PM Daily</strong>
               </div>
-              <a 
-                href="https://wa.me/917500236520" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-black text-white rounded-lg shadow transition cursor-pointer"
-              >
-                💬 Chat on WhatsApp
-              </a>
+              <div className="flex items-center gap-2">
+                {onOpenRestaurant && (
+                  <button 
+                    onClick={onOpenRestaurant}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-xs font-black text-slate-950 rounded-lg shadow transition cursor-pointer"
+                  >
+                    🍽️ Order Food / Restaurant
+                  </button>
+                )}
+                <a 
+                  href="https://wa.me/917500236520" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-black text-white rounded-lg shadow transition cursor-pointer"
+                >
+                  💬 Chat on WhatsApp
+                </a>
+              </div>
             </div>
           </div>
         </div>

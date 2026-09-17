@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, ShoppingCart, Store, MapPin, LogOut, ChevronRight, HelpCircle, UserCheck } from 'lucide-react';
+import { X, User, ShoppingCart, Store, MapPin, LogOut, ChevronRight, HelpCircle, UserCheck, Utensils, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { Customer } from '../types';
 
 interface ShiftingMenuProps {
@@ -16,6 +16,9 @@ interface ShiftingMenuProps {
   onOpenAccount: () => void;
   currentPincode: string;
   onOpenPincodeModal: () => void;
+  currentView?: 'grocery' | 'restaurant';
+  setCurrentView?: (view: 'grocery' | 'restaurant') => void;
+  onOpenPrivacyPolicy?: () => void;
 }
 
 export default function ShiftingMenu({
@@ -31,6 +34,9 @@ export default function ShiftingMenu({
   onOpenAccount,
   currentPincode,
   onOpenPincodeModal,
+  currentView = 'grocery',
+  setCurrentView,
+  onOpenPrivacyPolicy,
 }: ShiftingMenuProps) {
   return (
     <AnimatePresence>
@@ -58,12 +64,12 @@ export default function ShiftingMenu({
             {/* Menu Header */}
             <div className="p-6 bg-gradient-to-r from-emerald-800 to-emerald-950 text-white flex items-center justify-between shadow-md">
               <div className="flex flex-col">
-                <span className="text-base font-black tracking-tight italic flex items-center">
-                  Bari'
-                  <span className="text-yellow-400 font-extrabold not-italic ml-1">All-In-One Mart</span>
+                <span className="text-base font-black tracking-tight flex items-center gap-1.5">
+                  <span className="text-white">Manish Royal</span>
+                  <span className="text-yellow-400 font-extrabold text-xs px-2 py-0.5 rounded-full bg-emerald-950/80 border border-yellow-400/40">Web Designer</span>
                 </span>
                 <span className="text-[10px] text-yellow-300 italic font-medium">
-                  Main Store Navigation Menu
+                  Animated E-Commerce & Restaurant UI
                 </span>
               </div>
               <button
@@ -78,7 +84,53 @@ export default function ShiftingMenu({
             {/* Menu Body - Scrollable content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6" id="shifting-menu-body">
               
+              {/* Store Section Switcher */}
+              {!isAdmin && setCurrentView && (
+                <div className="bg-emerald-950 text-white border border-emerald-800 rounded-xl p-5 shadow-xs">
+                  <h4 className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <Utensils className="h-3 w-3" /> Select Store Department
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        setCurrentView('grocery');
+                        onClose();
+                      }}
+                      className={`p-3 rounded-xl border text-left transition flex flex-col gap-1 cursor-pointer ${
+                        currentView === 'grocery'
+                          ? 'bg-yellow-400 text-gray-950 border-yellow-500 font-black'
+                          : 'bg-emerald-900/60 text-emerald-100 border-emerald-700/60 hover:bg-emerald-900'
+                      }`}
+                    >
+                      <ShoppingBag className="h-4 w-4" />
+                      <span className="text-xs font-bold">Grocery Store</span>
+                      <span className="text-[9px] opacity-80">Daily Essentials</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setCurrentView('restaurant');
+                        onClose();
+                      }}
+                      className={`p-3 rounded-xl border text-left transition flex flex-col gap-1 cursor-pointer relative ${
+                        currentView === 'restaurant'
+                          ? 'bg-amber-500 text-gray-950 border-amber-600 font-black'
+                          : 'bg-emerald-900/60 text-emerald-100 border-emerald-700/60 hover:bg-emerald-900'
+                      }`}
+                    >
+                      <Utensils className="h-4 w-4 text-amber-900" />
+                      <span className="text-xs font-bold">Bari' Restaurant</span>
+                      <span className="text-[9px] opacity-80">Fresh Cooked Food</span>
+                      <span className="absolute top-2 right-2 bg-red-600 text-white text-[7px] font-black uppercase px-1 rounded-full">
+                        NEW
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Profile / Account Section */}
+
               <div className="bg-gray-50 border border-gray-100 rounded-xl p-5 shadow-xs">
                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
                   <User className="h-3 w-3 text-emerald-700" /> Account & Profile
@@ -150,6 +202,29 @@ export default function ShiftingMenu({
                     </button>
                   </div>
                 )}
+              </div>
+
+              {/* Privacy & Legal Policy Section */}
+              <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-4 shadow-xs space-y-2">
+                <h4 className="text-[10px] font-black text-emerald-900 uppercase tracking-widest flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" /> Privacy & Legal
+                </h4>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Learn how your personal data, local storage, and delivery details are protected.
+                </p>
+                <button
+                  onClick={() => {
+                    if (onOpenPrivacyPolicy) {
+                      onOpenPrivacyPolicy();
+                      onClose();
+                    }
+                  }}
+                  className="w-full py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold text-xs rounded-lg transition shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                  id="shifting-menu-privacy-btn"
+                >
+                  <ShieldCheck className="h-4 w-4 text-yellow-400" />
+                  View Privacy Policy
+                </button>
               </div>
 
               {/* Shopping Cart Section */}
@@ -256,9 +331,17 @@ export default function ShiftingMenu({
                   <HelpCircle className="h-3 w-3" /> Help Desk
                 </span>
                 <span>•</span>
-                <span className="hover:underline cursor-pointer">Terms</span>
-                <span>•</span>
-                <span className="hover:underline cursor-pointer">Privacy</span>
+                <span 
+                  onClick={() => {
+                    if (onOpenPrivacyPolicy) {
+                      onOpenPrivacyPolicy();
+                      onClose();
+                    }
+                  }}
+                  className="hover:underline cursor-pointer text-emerald-700 font-bold"
+                >
+                  Privacy Policy
+                </span>
               </div>
             </div>
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, User, Phone, MapPin, Building2, Map, Package, ShoppingBag, ShieldCheck, Clock, CheckCircle2, ChevronRight, Edit2, Check, RefreshCw } from 'lucide-react';
+import { X, User, Phone, MapPin, Building2, Map, Package, ShoppingBag, ShieldCheck, Clock, CheckCircle2, ChevronRight, Edit2, Check, RefreshCw, Trash2, FileText, LogOut } from 'lucide-react';
 import { Customer } from '../types';
 
 interface CustomerAccountModalProps {
@@ -7,6 +7,8 @@ interface CustomerAccountModalProps {
   onClose: () => void;
   currentCustomer: Customer | null;
   onUpdateProfile: (updatedCustomer: Customer) => void;
+  onDeleteAccount?: () => void;
+  onOpenPrivacyPolicy?: () => void;
 }
 
 export default function CustomerAccountModal({
@@ -14,6 +16,8 @@ export default function CustomerAccountModal({
   onClose,
   currentCustomer,
   onUpdateProfile,
+  onDeleteAccount,
+  onOpenPrivacyPolicy,
 }: CustomerAccountModalProps) {
   const [activeTab, setActiveTab] = React.useState<'profile' | 'orders'>('profile');
   
@@ -173,14 +177,28 @@ export default function CustomerAccountModal({
             </div>
           </div>
 
-          <button 
-            type="button"
-            onClick={onClose}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff9f00] hover:bg-orange-600 text-white font-extrabold text-[11px] rounded-lg transition-all shadow-md"
-            id="account-close-btn"
-          >
-            <span>Close ❌</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {onDeleteAccount && (
+              <button 
+                type="button"
+                onClick={onDeleteAccount}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-900/40 hover:bg-rose-900 text-rose-300 hover:text-white border border-rose-700/50 font-bold text-[11px] rounded-lg transition-all cursor-pointer"
+                id="account-signout-btn"
+                title="Sign out of account"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Sign Out</span>
+              </button>
+            )}
+            <button 
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff9f00] hover:bg-orange-600 text-white font-extrabold text-[11px] rounded-lg transition-all shadow-md cursor-pointer"
+              id="account-close-btn"
+            >
+              <span>Close ❌</span>
+            </button>
+          </div>
         </div>
 
         {/* Tab Selection */}
@@ -400,9 +418,48 @@ export default function CustomerAccountModal({
                       {currentCustomer.shippingAddress}, {currentCustomer.city} - <strong className="font-mono text-emerald-400">{currentCustomer.pincode}</strong>
                     </p>
                   </div>
-                  <div className="md:col-span-2 border-t border-gray-800/60 pt-3 mt-2 flex items-center gap-2 text-[11px] text-emerald-400 font-bold">
-                    <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                    <span>Your account credentials are secured and encrypted.</span>
+                  <div className="md:col-span-2 border-t border-gray-800/60 pt-3 mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[11px] text-emerald-400 font-bold">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                      <span>Your account data is stored locally on this device.</span>
+                    </div>
+                    {onOpenPrivacyPolicy && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          onOpenPrivacyPolicy();
+                        }}
+                        className="inline-flex items-center gap-1 text-xs text-yellow-400 hover:underline font-bold"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        <span>Privacy Policy</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Danger Zone: Delete Account */}
+                  <div className="md:col-span-2 border-t border-rose-900/40 pt-4 mt-2 bg-rose-950/20 p-3.5 rounded-lg border border-rose-900/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold text-rose-300">Delete Account & Clear Local Profile</p>
+                      <p className="text-[11px] text-gray-400">Permanently removes your customer profile and saved address from this device.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to delete your customer account profile? Your stored address and profile details will be permanently removed from this device.')) {
+                          localStorage.removeItem('localmart_grocery_customer');
+                          if (onDeleteAccount) {
+                            onDeleteAccount();
+                          }
+                          onClose();
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-rose-600/30 hover:bg-rose-600 text-rose-200 hover:text-white border border-rose-500/40 text-xs font-bold rounded-lg transition flex items-center gap-1.5 flex-shrink-0"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Delete Account</span>
+                    </button>
                   </div>
                 </div>
               )}

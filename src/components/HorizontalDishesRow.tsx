@@ -1,0 +1,183 @@
+import React, { useRef } from 'react';
+import { ChevronLeft, ChevronRight, Star, Zap, Play, ExternalLink, Sparkles } from 'lucide-react';
+import { MenuItem } from '../types';
+import SmartPricingBadge from './SmartPricingBadge';
+import { getItemImageUrl } from '../services/menuService';
+
+interface HorizontalDishesRowProps {
+  title: string;
+  subtitle?: string;
+  items: MenuItem[];
+  onOpenVideo?: (videoUrl: string, itemName: string) => void;
+  onPreviewImage?: (imageUrl: string, itemName: string) => void;
+}
+
+export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
+  title,
+  subtitle,
+  items,
+  onOpenVideo,
+  onPreviewImage,
+}) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const scrollAmount = direction === 'left' ? -320 : 320;
+      scrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  if (!items || items.length === 0) return null;
+
+  return (
+    <section className="my-6 relative">
+      <div className="flex items-center justify-between mb-3 px-1">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+            <h2 className="text-base sm:text-lg font-black tracking-tight text-stone-900 uppercase">
+              {title}
+            </h2>
+          </div>
+          {subtitle && (
+            <p className="text-xs text-stone-500 font-medium mt-0.5 ml-4">
+              {subtitle}
+            </p>
+          )}
+        </div>
+
+        {/* Desktop Arrow Controls */}
+        <div className="hidden sm:flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => scroll('left')}
+            className="w-8 h-8 rounded-full bg-white border border-stone-200 shadow-xs flex items-center justify-center text-stone-700 hover:text-stone-950 hover:bg-stone-50 transition-all cursor-pointer"
+            aria-label="Scroll left"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scroll('right')}
+            className="w-8 h-8 rounded-full bg-white border border-stone-200 shadow-xs flex items-center justify-center text-stone-700 hover:text-stone-950 hover:bg-stone-50 transition-all cursor-pointer"
+            aria-label="Scroll right"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Horizontal Side-Scrollable Track */}
+      <div
+        ref={scrollRef}
+        className="flex items-stretch gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-2 px-1"
+      >
+        {items.map((item, idx) => {
+          const imageUrl = getItemImageUrl(item);
+          const hasVideo = Boolean(item.videoUrl && item.videoUrl.trim().length > 0);
+          // Deterministic rating based on item id for realistic cafe feel
+          const rating = (4.0 + ((item.id * 7) % 10) / 10).toFixed(1);
+
+          return (
+            <div
+              key={`horizontal-${item.id}-${idx}`}
+              className="w-64 sm:w-72 flex-shrink-0 snap-start group rounded-2xl bg-white border border-stone-200/90 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden"
+            >
+              {/* Image Container */}
+              <div
+                className="relative w-full h-40 sm:h-44 overflow-hidden bg-stone-100 cursor-pointer"
+                onClick={() => onPreviewImage?.(imageUrl, item.name)}
+                title="Click to view photo"
+              >
+                <img
+                  src={imageUrl}
+                  alt={item.name}
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+
+                {/* Dark Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20 pointer-events-none" />
+
+                {/* Top Overlay: Offer or Chef Tag */}
+                <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-white bg-stone-900/80 backdrop-blur-xs px-2 py-0.5 rounded-md border border-white/20">
+                    <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                    Spotlight
+                  </span>
+                </div>
+
+                {/* Video Reel Button */}
+                {hasVideo && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenVideo?.(item.videoUrl!, item.name);
+                    }}
+                    className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-white/95 hover:bg-white px-2.5 py-1 rounded-full shadow-sm cursor-pointer border border-rose-100 active:scale-95"
+                  >
+                    <Play className="w-2.5 h-2.5 fill-rose-600 text-rose-600" />
+                    <span>Reel</span>
+                    <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                  </button>
+                )}
+
+                {/* Bottom Overlay: Dish Name & Veg Indicator */}
+                <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-end justify-between text-white">
+                  <div className="flex items-center gap-1.5">
+                    {/* Veg Square */}
+                    <div className="w-3.5 h-3.5 rounded-xs border border-emerald-500 flex items-center justify-center p-0.5 bg-white shadow-xs flex-shrink-0">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                    </div>
+                    <span className="text-xs font-bold text-white drop-shadow-md truncate max-w-[170px]">
+                      {item.category}
+                    </span>
+                  </div>
+
+                  {/* Rating Badge */}
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-emerald-700 text-white px-1.5 py-0.5 rounded-md shadow-xs">
+                    <Star className="w-2.5 h-2.5 fill-white" />
+                    {rating}
+                  </span>
+                </div>
+              </div>
+
+              {/* Card Body */}
+              <div className="p-3.5 flex flex-col justify-between flex-1">
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-stone-900 line-clamp-1 group-hover:text-rose-600 transition-colors">
+                    {item.name}
+                  </h3>
+
+                  {/* Prep time & Notes */}
+                  <div className="mt-1 flex items-center gap-2 text-[11px] text-stone-500">
+                    <span className="inline-flex items-center gap-0.5 text-stone-600 font-medium">
+                      <Zap className="w-3 h-3 text-amber-500" />
+                      10-15 mins
+                    </span>
+                    {item.notes && (
+                      <>
+                        <span className="text-stone-300">•</span>
+                        <span className="truncate text-stone-500 max-w-[120px]">{item.notes}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Price Badge */}
+                <div className="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between">
+                  <SmartPricingBadge item={item} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+};
+
+export default HorizontalDishesRow;

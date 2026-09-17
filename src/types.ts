@@ -1,3 +1,39 @@
+export interface MenuItem {
+  id: string;
+  category: string;
+  name: string;
+  price?: number;
+  originalPrice?: number;
+  stock?: number;
+  standardPrice?: string | number | null;
+  halfPrice?: string | number | null;
+  fullPrice?: string | number | null;
+  regularPrice?: string | number | null;
+  mediumPrice?: string | number | null;
+  largePrice?: string | number | null;
+  notes?: string | null;
+  videoUrl?: string | null;
+  imageUrl?: string | null;
+  isVeg?: boolean;
+  unit?: string;
+  image?: string;
+  description?: string;
+  isAvailable?: boolean;
+  spicyLevel?: 'Mild' | 'Medium' | 'Spicy';
+  prepTime?: string;
+  rating?: number;
+  reviewsCount?: number;
+  isChefSpecial?: boolean;
+}
+
+export type PricingType = 'standard' | 'half-full' | 'sizes' | 'custom';
+
+export interface CategoryInfo {
+  name: string;
+  icon: string;
+  count: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -6,7 +42,7 @@ export interface Product {
   originalPrice: number;
   unit: string;
   stock: number;
-  image: string; // URL or Base64 string
+  image: string;
   description?: string;
   isAvailable: boolean;
 }
@@ -68,3 +104,14 @@ export interface Customer {
   password?: string;
 }
 
+export const RESTAURANT_CATEGORIES = [
+  'All Dishes',
+  'Thalis & Meals',
+  'Fast Food & Chinese',
+  'Snacks & Chaat',
+  'South Indian',
+  'Beverages & Shakes',
+  'Desserts & Sweets'
+] as const;
+
+export type RestaurantCategoryType = typeof RESTAURANT_CATEGORIES[number];
