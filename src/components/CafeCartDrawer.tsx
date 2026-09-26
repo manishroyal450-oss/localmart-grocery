@@ -155,17 +155,17 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
       {/* Drawer Container */}
       <div
         id="cafe-cart-sidebar"
-        className="relative z-10 w-full max-w-lg bg-stone-50 h-full shadow-2xl flex flex-col justify-between overflow-hidden animate-in slide-in-from-right duration-300 border-l border-stone-200"
+        className="relative z-10 w-full max-w-lg bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 h-full shadow-2xl flex flex-col justify-between overflow-hidden animate-in slide-in-from-right duration-300 border-l border-stone-200 dark:border-stone-800"
       >
         {/* Header */}
-        <div className="bg-white px-4 sm:px-6 py-4 border-b border-stone-200 flex items-center justify-between shadow-2xs">
+        <div className="bg-white dark:bg-stone-900 px-4 sm:px-6 py-4 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between shadow-2xs">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-200 shadow-2xs">
+            <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-200 dark:border-rose-800 shadow-2xs">
               <ShoppingCart className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-stone-900 leading-tight">
+                <h2 className="text-base sm:text-lg font-black text-stone-900 dark:text-white leading-tight">
                   Your Cart
                 </h2>
                 {totalItems > 0 && (
@@ -174,7 +174,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-stone-500 font-medium">
+              <p className="text-[11px] text-stone-500 dark:text-stone-400 font-medium">
                 Friends 4 Ever Coffee Cafe • Pure Veg
               </p>
             </div>
@@ -185,7 +185,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
               <button
                 type="button"
                 onClick={onClearCart}
-                className="text-[11px] font-bold text-stone-500 hover:text-rose-600 px-2.5 py-1.5 rounded-lg hover:bg-stone-100 transition-colors flex items-center gap-1 cursor-pointer"
+                className="text-[11px] font-bold text-stone-500 dark:text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 px-2.5 py-1.5 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors flex items-center gap-1 cursor-pointer"
                 title="Clear all items in cart"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -196,7 +196,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-9 h-9 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition-colors cursor-pointer"
+              className="w-9 h-9 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 flex items-center justify-center transition-colors cursor-pointer"
               aria-label="Close cart"
             >
               <X className="w-5 h-5" />
@@ -275,18 +275,18 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
             /* Case 3: Cart has Items */
             <>
               {/* Order Items List */}
-              <div className="bg-white rounded-2xl p-3 sm:p-4 border border-stone-200 shadow-2xs space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-stone-100">
-                  <span className="text-xs font-black uppercase tracking-wider text-stone-700">
+              <div className="bg-white dark:bg-stone-900 rounded-2xl p-3 sm:p-4 border border-stone-200 dark:border-stone-800 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-stone-100 dark:border-stone-800">
+                  <span className="text-xs font-black uppercase tracking-wider text-stone-700 dark:text-stone-300">
                     Selected Dishes ({totalItems})
                   </span>
-                  <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1">
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                     <Sparkles className="w-3 h-3" />
                     100% Pure Veg
                   </span>
                 </div>
 
-                <div className="divide-y divide-stone-100">
+                <div className="divide-y divide-stone-100 dark:divide-stone-800">
                   {cartItems.map((ci) => {
                     const itemImageUrl = getItemImageUrl(ci.item);
                     return (
@@ -299,19 +299,19 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                           <img
                             src={itemImageUrl}
                             alt={ci.item.name}
-                            className="w-12 h-12 rounded-xl object-cover border border-stone-200 flex-shrink-0"
+                            className="w-12 h-12 rounded-xl object-cover border border-stone-200 dark:border-stone-700 flex-shrink-0"
                           />
                           <div className="min-w-0">
-                            <h4 className="text-xs sm:text-sm font-bold text-stone-900 truncate">
+                            <h4 className="text-xs sm:text-sm font-bold text-stone-900 dark:text-stone-100 truncate">
                               {ci.item.name}
                             </h4>
                             <div className="flex items-center gap-2 mt-0.5">
                               {ci.variant && ci.variant !== 'Standard' && (
-                                <span className="inline-block text-[10px] font-bold text-stone-600 bg-stone-100 px-1.5 py-0.2 rounded">
+                                <span className="inline-block text-[10px] font-bold text-stone-600 dark:text-stone-300 bg-stone-100 dark:bg-stone-800 px-1.5 py-0.2 rounded">
                                   {ci.variant}
                                 </span>
                               )}
-                              <span className="text-xs font-bold text-rose-600">
+                              <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
                                 ₹{ci.price}
                               </span>
                             </div>
@@ -320,17 +320,17 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
 
                         {/* Interactive Quantity Adjuster */}
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <div className="flex items-center rounded-xl bg-stone-100 border border-stone-200 p-0.5 shadow-2xs">
+                          <div className="flex items-center rounded-xl bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 p-0.5 shadow-2xs">
                             <button
                               type="button"
                               onClick={() => onUpdateQuantity(ci.cartItemId, -1)}
-                              className="w-7 h-7 rounded-lg bg-white hover:bg-stone-50 text-stone-800 flex items-center justify-center transition-colors shadow-2xs cursor-pointer active:scale-90"
+                              className="w-7 h-7 rounded-lg bg-white dark:bg-stone-700 hover:bg-stone-50 dark:hover:bg-stone-600 text-stone-800 dark:text-stone-200 flex items-center justify-center transition-colors shadow-2xs cursor-pointer active:scale-90"
                               title="Decrease quantity"
                             >
                               <Minus className="w-3.5 h-3.5" />
                             </button>
 
-                            <span className="w-7 text-center font-black text-xs text-stone-900">
+                            <span className="w-7 text-center font-black text-xs text-stone-900 dark:text-stone-100">
                               {ci.quantity}
                             </span>
 
@@ -346,7 +346,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
 
                           {/* Line total */}
                           <div className="text-right w-14">
-                            <span className="text-xs font-black text-stone-900">
+                            <span className="text-xs font-black text-stone-900 dark:text-stone-100">
                               ₹{ci.price * ci.quantity}
                             </span>
                           </div>
@@ -354,7 +354,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                           <button
                             type="button"
                             onClick={() => onRemoveItem(ci.cartItemId)}
-                            className="p-1 rounded text-stone-400 hover:text-rose-600 transition-colors cursor-pointer"
+                            className="p-1 rounded text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
                             title="Remove item"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -367,8 +367,8 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
               </div>
 
               {/* Order Mode (Dine-in / Takeaway / Delivery) */}
-              <div className="bg-white rounded-2xl p-3 sm:p-4 border border-stone-200 shadow-2xs">
-                <label className="block text-xs font-bold text-stone-800 mb-2">
+              <div className="bg-white dark:bg-stone-900 rounded-2xl p-3 sm:p-4 border border-stone-200 dark:border-stone-800 shadow-2xs">
+                <label className="block text-xs font-bold text-stone-800 dark:text-stone-200 mb-2">
                   Order Preference
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -378,7 +378,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                     className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border ${
                       orderType === 'dine-in'
                         ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
-                        : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'
+                        : 'bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700'
                     }`}
                   >
                     🍽️ Dine-In
@@ -389,7 +389,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                     className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border ${
                       orderType === 'takeaway'
                         ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
-                        : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'
+                        : 'bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700'
                     }`}
                   >
                     🛍️ Takeaway
@@ -400,7 +400,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                     className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border ${
                       orderType === 'delivery'
                         ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
-                        : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'
+                        : 'bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700'
                     }`}
                   >
                     🛵 Delivery
@@ -409,13 +409,13 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
               </div>
 
               {/* Customer Contact Details */}
-              <div className="bg-white rounded-2xl p-3 sm:p-4 border border-stone-200 shadow-2xs space-y-2.5">
+              <div className="bg-white dark:bg-stone-900 rounded-2xl p-3 sm:p-4 border border-stone-200 dark:border-stone-800 shadow-2xs space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-stone-800">
+                  <span className="text-xs font-bold text-stone-800 dark:text-stone-200">
                     Customer Information
                   </span>
                   {currentUser ? (
-                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                       Logged in as {currentUser.fullName.split(' ')[0]}
                     </span>
                   ) : (
@@ -423,7 +423,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                       <button
                         type="button"
                         onClick={onOpenProfile}
-                        className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
+                        className="text-[10px] font-bold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
                       >
                         Login for autofill
                       </button>
@@ -437,14 +437,14 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                     placeholder="Your Name"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-stone-50"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
                   />
                   <input
                     type="tel"
                     placeholder="Mobile Number"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-stone-50"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
                   />
                 </div>
 
@@ -457,7 +457,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                   }
                   value={tableOrAddress}
                   onChange={(e) => setTableOrAddress(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-stone-50"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
                 />
 
                 <input
@@ -465,36 +465,36 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                   placeholder="Special instructions (e.g. extra cheese, less spicy)"
                   value={specialInstructions}
                   onChange={(e) => setSpecialInstructions(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-stone-50"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
                 />
               </div>
 
               {/* Bill Details Breakdown */}
-              <div className="bg-white rounded-2xl p-3 sm:p-4 border border-stone-200 shadow-2xs space-y-2">
-                <span className="text-xs font-black uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
-                  <Receipt className="w-3.5 h-3.5 text-rose-600" />
+              <div className="bg-white dark:bg-stone-900 rounded-2xl p-3 sm:p-4 border border-stone-200 dark:border-stone-800 shadow-2xs space-y-2">
+                <span className="text-xs font-black uppercase tracking-wider text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                  <Receipt className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                   Bill Details
                 </span>
 
-                <div className="text-xs text-stone-600 space-y-1.5 pt-1">
+                <div className="text-xs text-stone-600 dark:text-stone-400 space-y-1.5 pt-1">
                   <div className="flex justify-between">
                     <span>Items Subtotal ({totalItems} items)</span>
-                    <span className="font-semibold text-stone-900">₹{subtotal}</span>
+                    <span className="font-semibold text-stone-900 dark:text-stone-100">₹{subtotal}</span>
                   </div>
 
-                  <div className="flex justify-between text-stone-500">
+                  <div className="flex justify-between text-stone-500 dark:text-stone-400">
                     <span>Taxes & Restaurant GST</span>
-                    <span className="text-emerald-600 font-bold">₹0 (Included)</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">₹0 (Included)</span>
                   </div>
 
-                  <div className="flex justify-between text-stone-500">
+                  <div className="flex justify-between text-stone-500 dark:text-stone-400">
                     <span>Delivery & Packaging</span>
-                    <span className="text-emerald-600 font-bold">FREE</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">FREE</span>
                   </div>
 
-                  <div className="border-t border-stone-200 pt-2 flex justify-between items-center text-sm font-black text-stone-900">
+                  <div className="border-t border-stone-200 dark:border-stone-800 pt-2 flex justify-between items-center text-sm font-black text-stone-900 dark:text-white">
                     <span>To Pay</span>
-                    <span className="text-base text-rose-600">₹{grandTotal}</span>
+                    <span className="text-base text-rose-600 dark:text-rose-400">₹{grandTotal}</span>
                   </div>
                 </div>
               </div>
@@ -504,10 +504,10 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
 
         {/* Footer Actions (Only when items exist and order not yet placed) */}
         {cartItems.length > 0 && !orderPlaced && (
-          <div className="bg-white px-4 sm:px-6 py-4 border-t border-stone-200 shadow-lg space-y-2.5">
-            <div className="flex items-center justify-between text-xs text-stone-500">
+          <div className="bg-white dark:bg-stone-900 px-4 sm:px-6 py-4 border-t border-stone-200 dark:border-stone-800 shadow-lg space-y-2.5">
+            <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400">
               <span>Grand Total</span>
-              <span className="text-lg font-black text-stone-900">
+              <span className="text-lg font-black text-stone-900 dark:text-white">
                 ₹{grandTotal}
               </span>
             </div>
@@ -535,8 +535,8 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
               </button>
             </div>
 
-            <p className="text-[10px] text-center text-stone-500 font-medium">
-              WhatsApp Orders: <span className="font-bold text-emerald-600">+91 97198 52037</span> • Friends 4 Ever Coffee Cafe, Chandpur
+            <p className="text-[10px] text-center text-stone-500 dark:text-stone-400 font-medium">
+              WhatsApp Orders: <span className="font-bold text-emerald-600 dark:text-emerald-400">+91 97198 52037</span> • Friends 4 Ever Coffee Cafe, Chandpur
             </p>
           </div>
         )}

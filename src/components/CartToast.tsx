@@ -46,8 +46,8 @@ export const CartToast: React.FC<CartToastProps> = ({ toast, onClose, onOpenCart
       className={`fixed z-50 transition-all duration-300 transform ${
         isVisible
           ? 'translate-y-0 opacity-100 scale-100'
-          : '-translate-y-4 sm:translate-y-4 opacity-0 scale-95 pointer-events-none'
-      } top-4 sm:top-auto sm:bottom-20 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md`}
+          : '-translate-y-4 opacity-0 scale-95 pointer-events-none'
+      } top-4 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md`}
     >
       <div className="bg-stone-900/95 text-white backdrop-blur-md rounded-2xl p-3 sm:p-3.5 shadow-2xl border border-stone-800 flex items-center gap-3">
         {/* Thumbnail Image */}

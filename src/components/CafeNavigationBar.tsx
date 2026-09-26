@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, ShoppingCart, User, ArrowRight, Sparkles } from 'lucide-react';
+import { Home, ShoppingCart, User } from 'lucide-react';
 import { UserProfile } from '../services/authService';
 
 interface CafeNavigationBarProps {
@@ -15,143 +15,125 @@ interface CafeNavigationBarProps {
 export const CafeNavigationBar: React.FC<CafeNavigationBarProps> = ({
   activeTab,
   cartCount,
-  cartTotalAmount,
   onGoHome,
   onOpenCart,
   onOpenProfile,
   currentUser,
 }) => {
+  const userName = currentUser ? currentUser.fullName.split(' ')[0] : 'Profile';
+
   return (
     <>
-      {/* 1. Floating Cart Quick-Bar (Appears above bottom navigation whenever items are in cart) */}
-      {cartCount > 0 && activeTab !== 'cart' && (
-        <div className="fixed bottom-16 sm:bottom-20 left-3 right-3 sm:left-auto sm:right-6 sm:w-96 z-40 animate-in slide-in-from-bottom-4 duration-300">
-          <div
-            onClick={onOpenCart}
-            className="bg-stone-900/95 hover:bg-stone-900 text-white backdrop-blur-md px-4 py-2.5 sm:py-3 rounded-2xl shadow-xl border border-stone-800 flex items-center justify-between cursor-pointer group active:scale-98 transition-all"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-rose-600 flex items-center justify-center text-white relative shadow-xs">
-                <ShoppingCart className="w-4 h-4" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center">
-                  {cartCount}
-                </span>
-              </div>
-              <div className="text-left leading-tight">
-                <span className="text-xs font-bold text-white block">
-                  {cartCount} {cartCount === 1 ? 'item' : 'items'} in Cart
-                </span>
-                <span className="text-[11px] font-bold text-emerald-400">
-                  ₹{cartTotalAmount} total
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1 text-xs font-black text-rose-400 group-hover:text-rose-300">
-              <span>View Cart 🛒</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Sticky Bottom Navigation Bar (Home, Cart, Profile) */}
+      {/* Sticky Bottom Navigation Bar with Liquid Droplet Bubbles */}
       <nav
         id="cafe-bottom-navigation-bar"
-        className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200/90 shadow-2xl py-1 px-4 sm:px-12 w-full max-w-full"
+        className="fixed bottom-0 left-0 right-0 z-40 bg-white/85 dark:bg-stone-900/85 backdrop-blur-lg border-t border-stone-200/80 dark:border-stone-800 shadow-[0_-8px_25px_rgba(0,0,0,0.06)] py-2 px-3 sm:px-12 w-full max-w-full transition-colors duration-200"
         aria-label="Cafe Navigation"
       >
-        <div className="max-w-md mx-auto flex items-center justify-around">
-          {/* HOME TAB */}
+        <div className="max-w-md mx-auto flex items-center justify-around gap-2">
+          {/* HOME TAB BUBBLE DROPLET */}
           <button
             type="button"
             onClick={onGoHome}
-            className={`flex flex-col items-center justify-center py-1.5 px-5 rounded-2xl transition-all cursor-pointer relative group active:scale-95 ${
+            id="nav-tab-home"
+            className={`group relative flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 rounded-[24px] cursor-pointer transition-all duration-300 animate-droplet-1 active:scale-95 select-none ${
               activeTab === 'home'
-                ? 'text-rose-600 font-black'
-                : 'text-stone-500 hover:text-stone-900 font-medium'
+                ? 'bg-gradient-to-br from-rose-500 via-rose-600 to-rose-700 text-white shadow-[0_6px_20px_rgba(225,29,72,0.4),inset_0_2px_4px_rgba(255,255,255,0.7),inset_0_-2px_4px_rgba(0,0,0,0.2)] font-black scale-105'
+                : 'bg-stone-100/90 dark:bg-stone-800/90 hover:bg-rose-50/90 dark:hover:bg-stone-750 text-stone-600 dark:text-stone-300 hover:text-rose-600 dark:hover:text-rose-400 border border-white/80 dark:border-stone-700/80 shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_2px_3px_rgba(255,255,255,0.8),inset_0_-1px_2px_rgba(0,0,0,0.06)] font-bold'
             }`}
+            title="Home Menu"
           >
-            <div
-              className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-all ${
-                activeTab === 'home'
-                  ? 'bg-rose-50 text-rose-600 border border-rose-200 shadow-2xs scale-105'
-                  : 'group-hover:bg-stone-100'
+            {/* Water Droplet Specular Surface Glare */}
+            <span className="absolute top-1 left-3 w-4 h-1.5 bg-white/70 rounded-full blur-[0.3px] pointer-events-none" />
+            <span className="absolute bottom-1 right-3 w-1.5 h-1 bg-white/30 rounded-full pointer-events-none" />
+
+            <Home
+              className={`w-4 h-4 transition-transform duration-300 ${
+                activeTab === 'home' ? 'scale-110' : 'group-hover:scale-110'
               }`}
-            >
-              <Home className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] mt-0.5 tracking-tight">Home</span>
+            />
+            {/* Name INSIDE the water droplet bubble */}
+            <span className="text-xs tracking-tight">Home</span>
+
+            {/* Micro active water bead */}
             {activeTab === 'home' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-600 mt-0.5" />
+              <span className="w-1.5 h-1.5 rounded-full bg-white shadow-xs ml-0.5 animate-pulse" />
             )}
           </button>
 
-          {/* CART SECTION TAB */}
+          {/* CART SECTION TAB BUBBLE DROPLET */}
           <button
             type="button"
             onClick={onOpenCart}
             id="nav-tab-cart"
-            className={`flex flex-col items-center justify-center py-1.5 px-5 rounded-2xl transition-all cursor-pointer relative group active:scale-95 ${
+            className={`group relative flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 rounded-[24px] cursor-pointer transition-all duration-300 animate-droplet-2 active:scale-95 select-none ${
               activeTab === 'cart'
-                ? 'text-rose-600 font-black'
-                : 'text-stone-500 hover:text-stone-900 font-medium'
+                ? 'bg-gradient-to-br from-rose-500 via-rose-600 to-rose-700 text-white shadow-[0_6px_20px_rgba(225,29,72,0.4),inset_0_2px_4px_rgba(255,255,255,0.7),inset_0_-2px_4px_rgba(0,0,0,0.2)] font-black scale-105'
+                : 'bg-stone-100/90 dark:bg-stone-800/90 hover:bg-rose-50/90 dark:hover:bg-stone-750 text-stone-600 dark:text-stone-300 hover:text-rose-600 dark:hover:text-rose-400 border border-white/80 dark:border-stone-700/80 shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_2px_3px_rgba(255,255,255,0.8),inset_0_-1px_2px_rgba(0,0,0,0.06)] font-bold'
             }`}
+            title="Cart Drawer"
           >
-            <div
-              className={`w-9 h-9 rounded-2xl flex items-center justify-center relative transition-all ${
-                activeTab === 'cart'
-                  ? 'bg-rose-50 text-rose-600 border border-rose-200 shadow-2xs scale-105'
-                  : 'group-hover:bg-stone-100'
+            {/* Water Droplet Specular Surface Glare */}
+            <span className="absolute top-1 left-3 w-4 h-1.5 bg-white/70 rounded-full blur-[0.3px] pointer-events-none" />
+            <span className="absolute bottom-1 right-3 w-1.5 h-1 bg-white/30 rounded-full pointer-events-none" />
+
+            <ShoppingCart
+              className={`w-4 h-4 transition-transform duration-300 ${
+                activeTab === 'cart' ? 'scale-110' : 'group-hover:scale-110'
               }`}
-            >
-              <ShoppingCart className="w-5 h-5" />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-xs animate-bounce [animation-duration:2s]">
-                  {cartCount}
-                </span>
-              )}
-            </div>
-            <span className="text-[11px] mt-0.5 tracking-tight flex items-center gap-0.5">
-              <span>Cart</span>
-              {cartCount > 0 && <span className="text-[10px] font-bold">({cartCount})</span>}
-            </span>
-            {activeTab === 'cart' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-600 mt-0.5" />
+            />
+            {/* Name INSIDE the water droplet bubble */}
+            <span className="text-xs tracking-tight">Cart</span>
+
+            {/* Cart Count Baby Droplet Pill */}
+            {cartCount > 0 && (
+              <span className="min-w-[19px] h-[19px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-md border border-white dark:border-stone-900 animate-droplet-btn">
+                {cartCount}
+              </span>
+            )}
+
+            {/* Micro active water bead */}
+            {activeTab === 'cart' && cartCount === 0 && (
+              <span className="w-1.5 h-1.5 rounded-full bg-white shadow-xs ml-0.5 animate-pulse" />
             )}
           </button>
 
-          {/* PROFILE SECTION TAB */}
+          {/* PROFILE SECTION TAB BUBBLE DROPLET */}
           <button
             type="button"
             onClick={onOpenProfile}
             id="nav-tab-profile"
-            className={`flex flex-col items-center justify-center py-1.5 px-5 rounded-2xl transition-all cursor-pointer relative group active:scale-95 ${
+            className={`group relative flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 rounded-[24px] cursor-pointer transition-all duration-300 animate-droplet-3 active:scale-95 select-none ${
               activeTab === 'profile'
-                ? 'text-rose-600 font-black'
-                : 'text-stone-500 hover:text-stone-900 font-medium'
+                ? 'bg-gradient-to-br from-rose-500 via-rose-600 to-rose-700 text-white shadow-[0_6px_20px_rgba(225,29,72,0.4),inset_0_2px_4px_rgba(255,255,255,0.7),inset_0_-2px_4px_rgba(0,0,0,0.2)] font-black scale-105'
+                : 'bg-stone-100/90 dark:bg-stone-800/90 hover:bg-rose-50/90 dark:hover:bg-stone-750 text-stone-600 dark:text-stone-300 hover:text-rose-600 dark:hover:text-rose-400 border border-white/80 dark:border-stone-700/80 shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_2px_3px_rgba(255,255,255,0.8),inset_0_-1px_2px_rgba(0,0,0,0.06)] font-bold'
             }`}
+            title="Profile & Orders"
           >
-            <div
-              className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-all ${
-                activeTab === 'profile'
-                  ? 'bg-rose-50 text-rose-600 border border-rose-200 shadow-2xs scale-105'
-                  : 'group-hover:bg-stone-100'
-              }`}
-            >
-              {currentUser ? (
-                <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-rose-600 to-rose-500 text-white font-black text-xs flex items-center justify-center shadow-xs">
-                  {currentUser.fullName.charAt(0).toUpperCase()}
-                </span>
-              ) : (
-                <User className="w-5 h-5" />
-              )}
-            </div>
-            <span className="text-[11px] mt-0.5 tracking-tight truncate max-w-[70px]">
-              {currentUser ? currentUser.fullName.split(' ')[0] : 'Profile'}
+            {/* Water Droplet Specular Surface Glare */}
+            <span className="absolute top-1 left-3 w-4 h-1.5 bg-white/70 rounded-full blur-[0.3px] pointer-events-none" />
+            <span className="absolute bottom-1 right-3 w-1.5 h-1 bg-white/30 rounded-full pointer-events-none" />
+
+            {currentUser ? (
+              <span className="w-4 h-4 rounded-full bg-white text-rose-600 font-black text-[10px] flex items-center justify-center shadow-xs">
+                {currentUser.fullName.charAt(0).toUpperCase()}
+              </span>
+            ) : (
+              <User
+                className={`w-4 h-4 transition-transform duration-300 ${
+                  activeTab === 'profile' ? 'scale-110' : 'group-hover:scale-110'
+                }`}
+              />
+            )}
+
+            {/* Name INSIDE the water droplet bubble */}
+            <span className="text-xs tracking-tight truncate max-w-[65px] sm:max-w-[90px]">
+              {userName}
             </span>
+
+            {/* Micro active water bead */}
             {activeTab === 'profile' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-600 mt-0.5" />
+              <span className="w-1.5 h-1.5 rounded-full bg-white shadow-xs ml-0.5 animate-pulse" />
             )}
           </button>
         </div>

@@ -56,12 +56,12 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-            <h2 className="text-base sm:text-lg font-black tracking-tight text-stone-900 uppercase">
+            <h2 className="text-base sm:text-lg font-black tracking-tight text-stone-900 dark:text-white uppercase">
               {title}
             </h2>
           </div>
           {subtitle && (
-            <p className="text-xs text-stone-500 font-medium mt-0.5 ml-4">
+            <p className="text-xs text-stone-500 dark:text-stone-400 font-medium mt-0.5 ml-4">
               {subtitle}
             </p>
           )}
@@ -72,7 +72,7 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
           <button
             type="button"
             onClick={() => scroll('left')}
-            className="w-8 h-8 rounded-full bg-white border border-stone-200 shadow-xs flex items-center justify-center text-stone-700 hover:text-stone-950 hover:bg-stone-50 transition-all cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 shadow-xs flex items-center justify-center text-stone-700 dark:text-stone-300 hover:text-stone-950 dark:hover:text-white hover:bg-stone-50 dark:hover:bg-stone-750 transition-all cursor-pointer"
             aria-label="Scroll left"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -80,7 +80,7 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
           <button
             type="button"
             onClick={() => scroll('right')}
-            className="w-8 h-8 rounded-full bg-white border border-stone-200 shadow-xs flex items-center justify-center text-stone-700 hover:text-stone-950 hover:bg-stone-50 transition-all cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 shadow-xs flex items-center justify-center text-stone-700 dark:text-stone-300 hover:text-stone-950 dark:hover:text-white hover:bg-stone-50 dark:hover:bg-stone-750 transition-all cursor-pointer"
             aria-label="Scroll right"
           >
             <ChevronRight className="w-4 h-4" />
@@ -119,11 +119,11 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
           return (
             <div
               key={`horizontal-${item.id}-${idx}`}
-              className="w-64 sm:w-72 flex-shrink-0 snap-start group rounded-2xl bg-white border border-stone-200/90 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden"
+              className="w-64 sm:w-72 flex-shrink-0 snap-start group rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden"
             >
               {/* Image Container */}
               <div
-                className="relative w-full h-40 sm:h-44 overflow-hidden bg-stone-100 cursor-pointer"
+                className="relative w-full h-40 sm:h-44 overflow-hidden bg-stone-100 dark:bg-stone-850 cursor-pointer"
                 onClick={() => onPreviewImage?.(imageUrl, item.name)}
                 title="Click to view photo"
               >
@@ -186,20 +186,20 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
               {/* Card Body */}
               <div className="p-3.5 flex flex-col justify-between flex-1">
                 <div>
-                  <h3 className="text-sm sm:text-base font-bold text-stone-900 line-clamp-1 group-hover:text-rose-600 transition-colors">
+                  <h3 className="text-sm sm:text-base font-bold text-stone-900 dark:text-stone-100 line-clamp-1 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
                     {item.name}
                   </h3>
 
                   {/* Prep time & Notes */}
-                  <div className="mt-1 flex items-center gap-2 text-[11px] text-stone-500">
-                    <span className="inline-flex items-center gap-0.5 text-stone-600 font-medium">
+                  <div className="mt-1 flex items-center gap-2 text-[11px] text-stone-500 dark:text-stone-400">
+                    <span className="inline-flex items-center gap-0.5 text-stone-600 dark:text-stone-300 font-medium">
                       <Zap className="w-3 h-3 text-amber-500" />
                       10-15 mins
                     </span>
                     {item.notes && (
                       <>
-                        <span className="text-stone-300">•</span>
-                        <span className="truncate text-stone-500 max-w-[120px]">
+                        <span className="text-stone-300 dark:text-stone-600">•</span>
+                        <span className="truncate text-stone-500 dark:text-stone-400 max-w-[120px]">
                           {item.notes}
                         </span>
                       </>
@@ -208,26 +208,27 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
                 </div>
 
                 {/* Price & Add to Cart */}
-                <div className="mt-3 pt-2.5 border-t border-stone-100 flex flex-col gap-2">
+                <div className="mt-3 pt-2.5 border-t border-stone-100 dark:border-stone-800 flex flex-col gap-2">
                   <div className="flex items-center justify-between gap-1.5">
                     <div className="min-w-0">
                       <SmartPricingBadge item={item} />
                     </div>
 
                     {quantity > 0 ? (
-                      <div className="flex items-center rounded-xl bg-stone-900 text-white p-0.5 shadow-2xs">
+                      <div className="relative inline-flex items-center rounded-[20px] bg-stone-900/95 dark:bg-stone-850/95 text-white p-0.5 shadow-md border border-stone-700/80 animate-droplet-btn">
+                        <span className="absolute top-0.5 left-2 w-2.5 h-1 bg-white/40 rounded-full blur-[0.2px] pointer-events-none" />
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             onUpdateQuantity?.(item, -1);
                           }}
-                          className="w-6 h-6 rounded-lg hover:bg-stone-800 flex items-center justify-center transition-colors cursor-pointer active:scale-90"
+                          className="w-5 h-5 rounded-full hover:bg-stone-800 dark:hover:bg-stone-700 flex items-center justify-center transition-colors cursor-pointer active:scale-90"
                           title="Reduce"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="w-6 text-center font-black text-xs text-white">
+                        <span className="w-5 text-center font-black text-xs text-white">
                           {quantity}
                         </span>
                         <button
@@ -236,7 +237,7 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
                             e.stopPropagation();
                             onUpdateQuantity?.(item, 1);
                           }}
-                          className="w-6 h-6 rounded-lg bg-rose-600 hover:bg-rose-500 flex items-center justify-center transition-colors cursor-pointer active:scale-90"
+                          className="w-5 h-5 rounded-full bg-rose-600 hover:bg-rose-500 flex items-center justify-center transition-colors cursor-pointer active:scale-90 shadow-2xs"
                           title="Add more"
                         >
                           <Plus className="w-3 h-3 text-white" />
@@ -246,11 +247,15 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
                       <button
                         type="button"
                         onClick={handleAddClick}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-300 hover:border-rose-600 text-[11px] font-black transition-all shadow-2xs active:scale-95 cursor-pointer"
+                        className="relative inline-flex items-center gap-1 px-3 py-1.5 rounded-[22px] bg-gradient-to-br from-rose-50 via-rose-100/90 to-rose-200/70 dark:from-rose-950/80 dark:via-rose-900/60 dark:to-stone-900 text-rose-600 dark:text-rose-300 hover:text-white dark:hover:text-white hover:bg-rose-600 dark:hover:bg-rose-600 border border-rose-300/80 dark:border-rose-750/70 text-[11px] font-black transition-all duration-300 shadow-[0_4px_12px_rgba(225,29,72,0.18),inset_0_2px_4px_rgba(255,255,255,0.85),inset_0_-2px_4px_rgba(0,0,0,0.06)] hover:shadow-rose-500/25 active:scale-90 animate-droplet-btn cursor-pointer select-none group"
                         title="Add to Cart 🛒"
                       >
-                        <ShoppingCart className="w-3 h-3" />
-                        <span>ADD 🛒</span>
+                        {/* Specular Droplet Water Glare */}
+                        <span className="absolute top-0.5 left-2 w-3 h-1 bg-white/80 rounded-full blur-[0.2px] pointer-events-none" />
+                        <span className="absolute bottom-0.5 right-2 w-1.5 h-0.5 bg-white/40 rounded-full pointer-events-none" />
+
+                        <ShoppingCart className="w-3 h-3 transition-transform group-hover:scale-110" />
+                        <span className="tracking-tight">ADD 🛒</span>
                         {hasMultipleVariants && (
                           <ChevronDown className="w-2.5 h-2.5 opacity-60" />
                         )}
@@ -260,8 +265,8 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
 
                   {/* Variant Selector Popup */}
                   {isPickerOpen && hasMultipleVariants && (
-                    <div className="p-1.5 bg-stone-50 rounded-xl border border-stone-200 animate-in fade-in zoom-in-95 duration-150">
-                      <span className="block text-[9px] font-bold text-stone-500 uppercase tracking-wider mb-1">
+                    <div className="p-1.5 bg-stone-50 dark:bg-stone-850 rounded-xl border border-stone-200 dark:border-stone-750 animate-in fade-in zoom-in-95 duration-150">
+                      <span className="block text-[9px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1">
                         Select Option 🛒
                       </span>
                       <div className="flex flex-wrap gap-1">
@@ -274,7 +279,7 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
                               setActivePickerId(null);
                               onAddToCart?.(item, v.label, v.price);
                             }}
-                            className="flex-1 min-w-[60px] py-0.5 px-1.5 rounded-lg bg-white hover:bg-rose-600 text-stone-800 hover:text-white border border-stone-200 hover:border-rose-600 text-[10px] font-bold transition-all shadow-2xs flex items-center justify-between gap-1 cursor-pointer"
+                            className="flex-1 min-w-[60px] py-0.5 px-1.5 rounded-lg bg-white dark:bg-stone-800 hover:bg-rose-600 dark:hover:bg-rose-600 text-stone-800 dark:text-stone-200 hover:text-white dark:hover:text-white border border-stone-200 dark:border-stone-700 hover:border-rose-600 text-[10px] font-bold transition-all shadow-2xs flex items-center justify-between gap-1 cursor-pointer"
                           >
                             <span>{v.label}</span>
                             <span className="font-black">₹{v.price}</span>

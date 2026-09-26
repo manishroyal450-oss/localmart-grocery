@@ -15,6 +15,7 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 import { UserProfile } from '../services/authService';
+import ThemeToggle from './ThemeToggle';
 
 interface ZomatoHeaderProps {
   searchQuery: string;
@@ -191,82 +192,88 @@ export const ZomatoHeader: React.FC<ZomatoHeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs w-full max-w-full overflow-x-clip">
+    <header className="sticky top-0 z-40 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-b border-stone-200/80 dark:border-stone-800 shadow-xs w-full max-w-full overflow-x-clip transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-3.5 sm:px-6 pt-3 pb-2.5">
-        {/* Top Location Link to Google Maps + Profile Section */}
+        {/* Top Location Link to Google Maps + Profile & Theme Corner Section */}
         <div className="flex items-center justify-between gap-3 mb-2.5">
           <a
             href={GOOGLE_MAPS_URL}
             target="_blank"
             rel="noopener noreferrer"
             title={`Click to open Google Maps: ${CAFE_FULL_ADDRESS}`}
-            className="group flex items-start gap-2.5 min-w-0 flex-1 p-1 rounded-xl hover:bg-stone-50 active:bg-stone-100 transition-all cursor-pointer select-none"
+            className="group flex items-start gap-2.5 min-w-0 flex-1 p-1 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800/60 active:bg-stone-100 dark:active:bg-stone-800 transition-all cursor-pointer select-none"
           >
-            <div className="w-9 h-9 rounded-full bg-rose-50 group-hover:bg-rose-100 border border-rose-200/80 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-2xs group-hover:scale-105 transition-all">
-              <MapPin className="w-4 h-4 text-rose-600 group-hover:text-rose-700 animate-bounce [animation-duration:2s]" />
+            <div className="w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950/60 group-hover:bg-rose-100 dark:group-hover:bg-rose-900/60 border border-rose-200/80 dark:border-rose-800/80 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-2xs group-hover:scale-105 transition-all">
+              <MapPin className="w-4 h-4 text-rose-600 dark:text-rose-400 group-hover:text-rose-700 animate-bounce [animation-duration:2s]" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <h1 className="text-sm xs:text-base sm:text-lg font-black text-stone-900 group-hover:text-rose-600 transition-colors leading-tight">
+                <h1 className="text-sm xs:text-base sm:text-lg font-black text-stone-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors leading-tight">
                   Friends 4 Ever Coffee Cafe
                 </h1>
-                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded-md flex-shrink-0">
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/80 px-1.5 py-0.2 rounded-md flex-shrink-0">
                   <span>Maps</span>
                   <ExternalLink className="w-2.5 h-2.5" />
                 </span>
               </div>
-              <p className="text-[11px] sm:text-xs text-stone-500 group-hover:text-stone-700 truncate font-medium flex items-center gap-1">
+              <p className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-300 truncate font-medium flex items-center gap-1">
                 <span>Chandpur - Dattiyana Rd, Chandpur</span>
                 <span>•</span>
-                <span className="text-rose-600 font-semibold underline decoration-rose-300 underline-offset-2">
+                <span className="text-rose-600 dark:text-rose-400 font-semibold underline decoration-rose-300 dark:decoration-rose-500/50 underline-offset-2">
                   Open Location
                 </span>
               </p>
             </div>
           </a>
 
-          {/* Profile / Account Action Button */}
-          <button
-            type="button"
-            onClick={onOpenProfile}
-            id="header-profile-btn"
-            className="flex-shrink-0 flex items-center gap-2 p-1 sm:px-2.5 sm:py-1.5 rounded-full bg-white hover:bg-rose-50/70 border border-stone-200 hover:border-rose-300 shadow-2xs transition-all cursor-pointer group active:scale-95 ml-2"
-            title={
-              currentUser
-                ? `Logged in as ${currentUser.fullName} (Click to view profile)`
-                : 'Log In / Sign Up'
-            }
-          >
-            {currentUser ? (
-              <>
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-rose-600 to-rose-500 text-white font-black text-xs flex items-center justify-center shadow-xs">
-                  {currentUser.fullName.charAt(0).toUpperCase()}
-                </div>
-                <div className="text-left leading-tight hidden md:block">
-                  <span className="text-xs font-bold text-stone-900 group-hover:text-rose-600 block truncate max-w-[95px]">
-                    {currentUser.fullName.split(' ')[0]}
+          {/* Top Right Corner Actions: Dark/Light Mode Toggle + Profile Button */}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-2" id="header-corner-actions">
+            {/* Dark & Light Mode Toggle */}
+            <ThemeToggle />
+
+            {/* Profile / Account Action Button */}
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              id="header-profile-btn"
+              className="flex-shrink-0 flex items-center gap-2 p-1 sm:px-2.5 sm:py-1.5 rounded-full bg-white dark:bg-stone-800 hover:bg-rose-50/70 dark:hover:bg-stone-700/80 border border-stone-200 dark:border-stone-700 hover:border-rose-300 dark:hover:border-rose-500/40 shadow-2xs transition-all cursor-pointer group active:scale-95"
+              title={
+                currentUser
+                  ? `Logged in as ${currentUser.fullName} (Click to view profile)`
+                  : 'Log In / Sign Up'
+              }
+            >
+              {currentUser ? (
+                <>
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-rose-600 to-rose-500 text-white font-black text-xs flex items-center justify-center shadow-xs">
+                    {currentUser.fullName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="text-left leading-tight hidden md:block">
+                    <span className="text-xs font-bold text-stone-900 dark:text-stone-100 group-hover:text-rose-600 dark:group-hover:text-rose-400 block truncate max-w-[95px]">
+                      {currentUser.fullName.split(' ')[0]}
+                    </span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">
+                      Profile
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-8 h-8 rounded-full bg-rose-50 dark:bg-stone-700 text-rose-600 dark:text-rose-400 group-hover:bg-rose-600 group-hover:text-white transition-colors flex items-center justify-center border border-rose-200 dark:border-stone-600">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold text-stone-800 dark:text-stone-200 group-hover:text-rose-600 hidden sm:inline mr-1">
+                    Login
                   </span>
-                  <span className="text-[10px] text-emerald-600 font-bold block">
-                    Profile
-                  </span>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors flex items-center justify-center border border-rose-200">
-                  <User className="w-4 h-4" />
-                </div>
-                <span className="text-xs font-bold text-stone-800 group-hover:text-rose-600 hidden sm:inline mr-1">
-                  Login
-                </span>
-              </>
-            )}
-          </button>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Zomato-style Search Bar with Functional Voice Search */}
         <div className="relative flex items-center">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-rose-600">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-rose-600 dark:text-rose-400">
             <Search className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
 
@@ -280,10 +287,10 @@ export const ZomatoHeader: React.FC<ZomatoHeaderProps> = ({
                 ? 'Listening... Boliyen (e.g. "Pizza", "Cold Coffee")'
                 : 'Search "burger", "pizza", "coffee", "shakes"...'
             }
-            className={`w-full pl-10 pr-20 py-2.5 sm:py-3 rounded-xl bg-stone-50 hover:bg-stone-100/80 focus:bg-white border text-stone-900 placeholder:text-stone-400 text-xs sm:text-sm font-medium shadow-2xs focus:outline-none transition-all ${
+            className={`w-full pl-10 pr-20 py-2.5 sm:py-3 rounded-xl bg-stone-50 dark:bg-stone-800 hover:bg-stone-100/80 dark:hover:bg-stone-750 focus:bg-white dark:focus:bg-stone-850 border text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 text-xs sm:text-sm font-medium shadow-2xs focus:outline-none transition-all ${
               isListening
                 ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20 placeholder:text-rose-600 placeholder:font-bold'
-                : 'border-stone-200 focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500'
+                : 'border-stone-200 dark:border-stone-700 focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500'
             }`}
           />
 
@@ -293,11 +300,11 @@ export const ZomatoHeader: React.FC<ZomatoHeaderProps> = ({
               <button
                 type="button"
                 onClick={() => onSearchChange('')}
-                className="p-1 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-200 transition-colors cursor-pointer"
+                className="p-1 rounded-full text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors cursor-pointer"
                 title="Clear search"
               >
-                <div className="w-4 h-4 rounded-full bg-stone-200 flex items-center justify-center">
-                  <X className="w-2.5 h-2.5 text-stone-600" />
+                <div className="w-4 h-4 rounded-full bg-stone-200 dark:bg-stone-700 flex items-center justify-center">
+                  <X className="w-2.5 h-2.5 text-stone-600 dark:text-stone-300" />
                 </div>
               </button>
             )}
@@ -309,7 +316,7 @@ export const ZomatoHeader: React.FC<ZomatoHeaderProps> = ({
               className={`p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center ${
                 isListening
                   ? 'bg-rose-600 text-white animate-pulse shadow-md ring-4 ring-rose-200 scale-110'
-                  : 'bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 active:scale-90'
+                  : 'bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/80 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 active:scale-90'
               }`}
               title={
                 isListening

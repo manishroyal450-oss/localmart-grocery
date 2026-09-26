@@ -77,16 +77,16 @@ export const ZomatoDishCard: React.FC<ZomatoDishCardProps> = ({
   return (
     <div
       id={`zomato-card-${item.id}`}
-      className="group relative flex flex-col justify-between rounded-2xl bg-white border border-stone-200/90 shadow-2xs hover:shadow-lg transition-all duration-300 overflow-hidden"
+      className="group relative flex flex-col justify-between rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 shadow-2xs hover:shadow-lg transition-all duration-300 overflow-hidden"
     >
       {/* Food Photo Container */}
       <div
-        className="relative w-full h-44 sm:h-52 overflow-hidden bg-stone-100 cursor-pointer"
+        className="relative w-full h-44 sm:h-52 overflow-hidden bg-stone-100 dark:bg-stone-850 cursor-pointer"
         onClick={() => onPreviewImage?.(displayImageUrl, item.name)}
         title="Click to view full photo"
       >
         {!imageLoaded && (
-          <div className="absolute inset-0 bg-stone-200/60 animate-pulse flex items-center justify-center text-stone-400">
+          <div className="absolute inset-0 bg-stone-200/60 dark:bg-stone-800/60 animate-pulse flex items-center justify-center text-stone-400">
             <ImageIcon className="w-8 h-8 opacity-40" />
           </div>
         )}
@@ -178,39 +178,40 @@ export const ZomatoDishCard: React.FC<ZomatoDishCardProps> = ({
       {/* Card Information */}
       <div className="p-3.5 sm:p-4 flex flex-col justify-between flex-1">
         <div>
-          <h3 className="text-base sm:text-lg font-bold text-stone-900 group-hover:text-rose-600 transition-colors leading-snug">
+          <h3 className="text-base sm:text-lg font-bold text-stone-900 dark:text-stone-100 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors leading-snug">
             {item.name}
           </h3>
 
           {item.notes && (
-            <p className="text-xs text-stone-500 mt-1 line-clamp-2">
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 line-clamp-2">
               {item.notes}
             </p>
           )}
         </div>
 
         {/* Pricing & Add to Cart Section */}
-        <div className="mt-3 pt-3 border-t border-stone-100 flex flex-col gap-2.5">
+        <div className="mt-3 pt-3 border-t border-stone-100 dark:border-stone-800 flex flex-col gap-2.5">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <SmartPricingBadge item={item} />
             </div>
 
-            {/* Interactive Add to Cart or Quantity Adjuster */}
+            {/* Interactive Add to Cart or Quantity Adjuster with Water Droplet Bubble Motion */}
             {cartQuantity > 0 ? (
-              <div className="flex items-center rounded-xl bg-stone-900 text-white p-0.5 shadow-sm">
+              <div className="relative inline-flex items-center rounded-[20px] bg-stone-900/95 dark:bg-stone-850/95 text-white p-0.5 shadow-md border border-stone-700/80 animate-droplet-btn">
+                <span className="absolute top-0.5 left-2 w-2.5 h-1 bg-white/40 rounded-full blur-[0.2px] pointer-events-none" />
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onUpdateQuantity?.(-1);
                   }}
-                  className="w-7 h-7 rounded-lg hover:bg-stone-800 flex items-center justify-center transition-colors cursor-pointer active:scale-90"
+                  className="w-6 h-6 rounded-full hover:bg-stone-800 dark:hover:bg-stone-700 flex items-center justify-center transition-colors cursor-pointer active:scale-90"
                   title="Reduce quantity"
                 >
-                  <Minus className="w-3.5 h-3.5" />
+                  <Minus className="w-3 h-3" />
                 </button>
-                <span className="w-7 text-center font-black text-xs text-white">
+                <span className="w-6 text-center font-black text-xs text-white">
                   {cartQuantity}
                 </span>
                 <button
@@ -219,21 +220,25 @@ export const ZomatoDishCard: React.FC<ZomatoDishCardProps> = ({
                     e.stopPropagation();
                     onUpdateQuantity?.(1);
                   }}
-                  className="w-7 h-7 rounded-lg bg-rose-600 hover:bg-rose-500 flex items-center justify-center transition-colors cursor-pointer active:scale-90"
+                  className="w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-500 flex items-center justify-center transition-colors cursor-pointer active:scale-90 shadow-2xs"
                   title="Add more"
                 >
-                  <Plus className="w-3.5 h-3.5 text-white" />
+                  <Plus className="w-3 h-3 text-white" />
                 </button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={handleAddClick}
-                className="relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-300 hover:border-rose-600 text-xs font-black transition-all duration-200 shadow-2xs hover:shadow-sm active:scale-95 cursor-pointer"
+                className="relative inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[22px] bg-gradient-to-br from-rose-50 via-rose-100/90 to-rose-200/70 dark:from-rose-950/80 dark:via-rose-900/60 dark:to-stone-900 text-rose-600 dark:text-rose-300 hover:text-white dark:hover:text-white hover:bg-rose-600 dark:hover:bg-rose-600 border border-rose-300/80 dark:border-rose-750/70 text-xs font-black transition-all duration-300 shadow-[0_4px_12px_rgba(225,29,72,0.18),inset_0_2px_4px_rgba(255,255,255,0.85),inset_0_-2px_4px_rgba(0,0,0,0.06)] hover:shadow-rose-500/25 active:scale-90 animate-droplet-btn cursor-pointer select-none group"
                 title="Add to Cart 🛒"
               >
-                <ShoppingCart className="w-3.5 h-3.5" />
-                <span>ADD 🛒</span>
+                {/* Specular Droplet Water Glare */}
+                <span className="absolute top-0.5 left-2 w-3.5 h-1 bg-white/80 rounded-full blur-[0.2px] pointer-events-none" />
+                <span className="absolute bottom-0.5 right-2 w-1.5 h-0.5 bg-white/40 rounded-full pointer-events-none" />
+
+                <ShoppingCart className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+                <span className="tracking-tight">ADD 🛒</span>
                 {hasMultipleVariants && (
                   <ChevronDown className="w-3 h-3 opacity-60" />
                 )}
@@ -243,8 +248,8 @@ export const ZomatoDishCard: React.FC<ZomatoDishCardProps> = ({
 
           {/* Multiple Variants Picker Popup (Regular/Medium/Large or Half/Full) */}
           {showVariantPicker && hasMultipleVariants && (
-            <div className="mt-1 p-2 bg-stone-50 rounded-xl border border-stone-200 animate-in fade-in zoom-in-95 duration-150">
-              <span className="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5">
+            <div className="mt-1 p-2 bg-stone-50 dark:bg-stone-850 rounded-xl border border-stone-200 dark:border-stone-750 animate-in fade-in zoom-in-95 duration-150">
+              <span className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">
                 Select Option to Add 🛒
               </span>
               <div className="flex flex-wrap gap-1.5">
@@ -253,7 +258,7 @@ export const ZomatoDishCard: React.FC<ZomatoDishCardProps> = ({
                     key={v.label}
                     type="button"
                     onClick={(e) => handleSelectVariant(e, v.label, v.price)}
-                    className="flex-1 min-w-[70px] py-1 px-2 rounded-lg bg-white hover:bg-rose-600 text-stone-800 hover:text-white border border-stone-200 hover:border-rose-600 text-xs font-bold transition-all shadow-2xs flex items-center justify-between gap-1 cursor-pointer"
+                    className="flex-1 min-w-[70px] py-1 px-2 rounded-lg bg-white dark:bg-stone-800 hover:bg-rose-600 dark:hover:bg-rose-600 text-stone-800 dark:text-stone-200 hover:text-white dark:hover:text-white border border-stone-200 dark:border-stone-700 hover:border-rose-600 text-xs font-bold transition-all shadow-2xs flex items-center justify-between gap-1 cursor-pointer"
                   >
                     <span>{v.label}</span>
                     <span className="text-[11px] font-black">₹{v.price}</span>

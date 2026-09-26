@@ -15,21 +15,21 @@ export const SmartPricingBadge: React.FC<SmartPricingBadgeProps> = ({ item }) =>
     return (
       <div className="flex flex-wrap items-center gap-1.5" id={`pricing-sizes-${item.id}`}>
         {regularPrice && (
-          <div className="inline-flex items-center px-2 py-1 rounded-md bg-amber-100/90 text-amber-950 border border-amber-300 text-xs font-semibold shadow-xs">
-            <span className="text-[10px] font-black text-amber-800 uppercase tracking-wider mr-1 px-1 py-0.2 bg-amber-200/80 rounded">R</span>
-            <span className="font-bold text-amber-950">₹{regularPrice}</span>
+          <div className="inline-flex items-center px-2 py-1 rounded-md bg-amber-100/90 dark:bg-amber-950/80 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 text-xs font-semibold shadow-xs">
+            <span className="text-[10px] font-black text-amber-800 dark:text-amber-300 uppercase tracking-wider mr-1 px-1 py-0.2 bg-amber-200/80 dark:bg-amber-900/60 rounded">R</span>
+            <span className="font-bold">₹{regularPrice}</span>
           </div>
         )}
         {mediumPrice && (
-          <div className="inline-flex items-center px-2 py-1 rounded-md bg-amber-100/90 text-amber-950 border border-amber-300 text-xs font-semibold shadow-xs">
-            <span className="text-[10px] font-black text-amber-800 uppercase tracking-wider mr-1 px-1 py-0.2 bg-amber-200/80 rounded">M</span>
-            <span className="font-bold text-amber-950">₹{mediumPrice}</span>
+          <div className="inline-flex items-center px-2 py-1 rounded-md bg-amber-100/90 dark:bg-amber-950/80 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 text-xs font-semibold shadow-xs">
+            <span className="text-[10px] font-black text-amber-800 dark:text-amber-300 uppercase tracking-wider mr-1 px-1 py-0.2 bg-amber-200/80 dark:bg-amber-900/60 rounded">M</span>
+            <span className="font-bold">₹{mediumPrice}</span>
           </div>
         )}
         {largePrice && (
-          <div className="inline-flex items-center px-2 py-1 rounded-md bg-amber-100/90 text-amber-950 border border-amber-300 text-xs font-semibold shadow-xs">
-            <span className="text-[10px] font-black text-amber-800 uppercase tracking-wider mr-1 px-1 py-0.2 bg-amber-200/80 rounded">L</span>
-            <span className="font-bold text-amber-950">₹{largePrice}</span>
+          <div className="inline-flex items-center px-2 py-1 rounded-md bg-amber-100/90 dark:bg-amber-950/80 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 text-xs font-semibold shadow-xs">
+            <span className="text-[10px] font-black text-amber-800 dark:text-amber-300 uppercase tracking-wider mr-1 px-1 py-0.2 bg-amber-200/80 dark:bg-amber-900/60 rounded">L</span>
+            <span className="font-bold">₹{largePrice}</span>
           </div>
         )}
       </div>
@@ -43,15 +43,15 @@ export const SmartPricingBadge: React.FC<SmartPricingBadgeProps> = ({ item }) =>
     return (
       <div className="flex flex-wrap items-center gap-1.5" id={`pricing-halffull-${item.id}`}>
         {halfPrice && (
-          <div className="inline-flex items-center px-2 py-1 rounded-md bg-emerald-100/90 text-emerald-950 border border-emerald-300 text-xs font-semibold shadow-xs">
-            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide mr-1">Half</span>
-            <span className="font-bold text-emerald-950">₹{halfPrice}</span>
+          <div className="inline-flex items-center px-2 py-1 rounded-md bg-emerald-100/90 dark:bg-emerald-950/80 text-emerald-950 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 text-xs font-semibold shadow-xs">
+            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide mr-1">Half</span>
+            <span className="font-bold">₹{halfPrice}</span>
           </div>
         )}
         {fullPrice && (
-          <div className="inline-flex items-center px-2 py-1 rounded-md bg-emerald-100/90 text-emerald-950 border border-emerald-300 text-xs font-semibold shadow-xs">
-            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide mr-1">Full</span>
-            <span className="font-bold text-emerald-950">₹{fullPrice}</span>
+          <div className="inline-flex items-center px-2 py-1 rounded-md bg-emerald-100/90 dark:bg-emerald-950/80 text-emerald-950 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 text-xs font-semibold shadow-xs">
+            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide mr-1">Full</span>
+            <span className="font-bold">₹{fullPrice}</span>
           </div>
         )}
       </div>
@@ -64,7 +64,7 @@ export const SmartPricingBadge: React.FC<SmartPricingBadgeProps> = ({ item }) =>
   if (displayPrice) {
     return (
       <div className="inline-flex items-baseline" id={`pricing-standard-${item.id}`}>
-        <span className="text-xl font-extrabold text-stone-900 tracking-tight">
+        <span className="text-xl font-extrabold text-stone-900 dark:text-stone-100 tracking-tight">
           ₹{displayPrice}
         </span>
       </div>

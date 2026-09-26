@@ -331,8 +331,8 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-stone-50 text-stone-900 selection:bg-rose-100 selection:text-rose-900 overflow-x-hidden w-full max-w-full pb-28 sm:pb-20">
-      {/* 1. Zomato Top Header (Brand, Location, Search Bar, Navigation Pills: Home, Cart, Profile) */}
+    <div className="min-h-screen flex flex-col bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 selection:bg-rose-100 dark:selection:bg-rose-900/40 selection:text-rose-900 dark:selection:text-rose-200 overflow-x-hidden w-full max-w-full pb-18 sm:pb-12 transition-colors duration-200">
+      {/* 1. Zomato Top Header (Brand, Location, Search Bar, Dark/Light Mode, Profile) */}
       <ZomatoHeader
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -370,8 +370,8 @@ export const App: React.FC = () => {
               onClick={() => setActiveFilter('all')}
               className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 activeFilter === 'all'
-                  ? 'bg-stone-900 text-white shadow-xs'
-                  : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+                  ? 'bg-stone-900 dark:bg-white text-white dark:text-stone-900 shadow-xs'
+                  : 'bg-white dark:bg-stone-850 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-750 hover:bg-stone-100 dark:hover:bg-stone-800'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
@@ -384,7 +384,7 @@ export const App: React.FC = () => {
               className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 activeFilter === 'reels'
                   ? 'bg-rose-600 text-white shadow-xs'
-                  : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+                  : 'bg-white dark:bg-stone-850 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-750 hover:bg-stone-100 dark:hover:bg-stone-800'
               }`}
             >
               <Play className="w-3.5 h-3.5 fill-current text-rose-500" />
@@ -397,7 +397,7 @@ export const App: React.FC = () => {
               className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 activeFilter === 'popular'
                   ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+                  : 'bg-white dark:bg-stone-850 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-750 hover:bg-stone-100 dark:hover:bg-stone-800'
               }`}
             >
               <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
@@ -410,7 +410,7 @@ export const App: React.FC = () => {
               className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 activeFilter === 'fast'
                   ? 'bg-emerald-700 text-white shadow-xs'
-                  : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+                  : 'bg-white dark:bg-stone-850 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-750 hover:bg-stone-100 dark:hover:bg-stone-800'
               }`}
             >
               <Zap className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" />
@@ -450,14 +450,14 @@ export const App: React.FC = () => {
 
         {/* Empty State */}
         {!loading && !error && filteredItems.length === 0 && (
-          <div className="text-center py-16 px-4 bg-white border border-stone-200 rounded-3xl max-w-md mx-auto shadow-xs my-8">
-            <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4">
+          <div className="text-center py-16 px-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl max-w-md mx-auto shadow-xs my-8 transition-colors">
+            <div className="w-16 h-16 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto mb-4">
               <SearchX className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-bold text-stone-900 mb-1">
+            <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-1">
               No Dishes Found
             </h3>
-            <p className="text-xs sm:text-sm text-stone-500 mb-6 leading-relaxed">
+            <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mb-6 leading-relaxed">
               We couldn't find any dishes matching your selection. Try clearing your search or filter.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
@@ -474,7 +474,7 @@ export const App: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedCategory('All')}
-                  className="px-4 py-2 rounded-xl bg-stone-900 text-white font-bold text-xs shadow-xs hover:bg-stone-800 transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-stone-900 dark:bg-stone-800 text-white font-bold text-xs shadow-xs hover:bg-stone-800 dark:hover:bg-stone-700 transition-all cursor-pointer"
                 >
                   Show All Categories
                 </button>
@@ -489,10 +489,10 @@ export const App: React.FC = () => {
             {/* If All Categories are selected & no active search/chip: Display categorized vertical sections */}
             {groupedItems ? (
               <div className="space-y-12">
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-stone-200">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-stone-200 dark:border-stone-800">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-stone-900"></span>
-                    <h2 className="text-base sm:text-lg font-black uppercase tracking-tight text-stone-900">
+                    <span className="w-2 h-2 rounded-full bg-stone-900 dark:bg-rose-500"></span>
+                    <h2 className="text-base sm:text-lg font-black uppercase tracking-tight text-stone-900 dark:text-white">
                       Explore Full Menu
                     </h2>
                   </div>
@@ -510,16 +510,16 @@ export const App: React.FC = () => {
                       className="scroll-mt-24"
                     >
                       {/* Section Header */}
-                      <div className="flex items-center justify-between pb-2 mb-4 border-b border-stone-200/90">
+                      <div className="flex items-center justify-between pb-2 mb-4 border-b border-stone-200/90 dark:border-stone-800">
                         <div className="flex items-center gap-2.5">
-                          <span className="text-xl p-1 rounded-lg bg-stone-100 border border-stone-200">
+                          <span className="text-xl p-1 rounded-lg bg-stone-100 dark:bg-stone-850 border border-stone-200 dark:border-stone-750">
                             {icon}
                           </span>
                           <div>
-                            <h3 className="text-lg sm:text-xl font-black text-stone-900 font-display">
+                            <h3 className="text-lg sm:text-xl font-black text-stone-900 dark:text-white font-display">
                               {group.category}
                             </h3>
-                            <p className="text-xs text-stone-500 font-medium">
+                            <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">
                               Fresh cafe delicacies
                             </p>
                           </div>
@@ -528,7 +528,7 @@ export const App: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setSelectedCategory(group.category)}
-                          className="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1 rounded-full transition-colors cursor-pointer"
+                          className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/80 px-3 py-1 rounded-full transition-colors cursor-pointer"
                         >
                           View Only {group.category}
                         </button>
@@ -557,12 +557,12 @@ export const App: React.FC = () => {
             ) : (
               /* Flat Grid when filtered by category, search, or chip */
               <div>
-                <div className="flex items-center justify-between mb-5 pb-3 border-b border-stone-200">
+                <div className="flex items-center justify-between mb-5 pb-3 border-b border-stone-200 dark:border-stone-800">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">
                       {getCategoryIcon(selectedCategory)}
                     </span>
-                    <h2 className="text-xl sm:text-2xl font-black text-stone-900 font-display">
+                    <h2 className="text-xl sm:text-2xl font-black text-stone-900 dark:text-white font-display">
                       {selectedCategory === 'All'
                         ? searchQuery
                           ? `Results for "${searchQuery}"`
@@ -575,7 +575,7 @@ export const App: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setSelectedCategory('All')}
-                      className="text-xs font-bold text-stone-600 hover:text-stone-900 bg-white border border-stone-200 px-3 py-1 rounded-full transition-all cursor-pointer shadow-2xs"
+                      className="text-xs font-bold text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white bg-white dark:bg-stone-850 border border-stone-200 dark:border-stone-750 px-3 py-1 rounded-full transition-all cursor-pointer shadow-2xs"
                     >
                       Show All Categories
                     </button>
@@ -605,12 +605,12 @@ export const App: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-stone-200 mt-12 py-8 text-center text-xs text-stone-500">
+      <footer className="bg-white dark:bg-stone-900 border-t border-stone-200 dark:border-stone-800 mt-12 py-8 text-center text-xs text-stone-500 dark:text-stone-400 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 flex flex-col items-center gap-2.5">
-          <div className="flex items-center gap-2 font-bold text-stone-800 text-sm">
+          <div className="flex items-center gap-2 font-bold text-stone-800 dark:text-stone-200 text-sm">
             <span>Friends 4 Ever Coffee Cafe</span>
             <span>•</span>
-            <span className="text-emerald-600 flex items-center gap-1">
+            <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
               100% Pure Veg
             </span>
@@ -622,17 +622,17 @@ export const App: React.FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             title={`View on Google Maps: ${CAFE_FULL_ADDRESS}`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-700 hover:text-rose-600 transition-colors text-xs font-medium max-w-xl text-center"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-50 dark:bg-stone-850 hover:bg-stone-100 dark:hover:bg-stone-800 border border-stone-200 dark:border-stone-750 text-stone-700 dark:text-stone-300 hover:text-rose-600 dark:hover:text-rose-400 transition-colors text-xs font-medium max-w-xl text-center"
           >
-            <MapPin className="w-3.5 h-3.5 text-rose-600 flex-shrink-0" />
+            <MapPin className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 flex-shrink-0" />
             <span className="truncate">{CAFE_FULL_ADDRESS}</span>
-            <span className="text-rose-600 font-bold ml-1">Open in Maps ↗</span>
+            <span className="text-rose-600 dark:text-rose-400 font-bold ml-1">Open in Maps ↗</span>
           </a>
 
-          <p className="text-stone-400 text-[11px]">
+          <p className="text-stone-400 dark:text-stone-500 text-[11px]">
             Live Digital Menu connected with Google Sheets • Real-time Updates
           </p>
-          <p className="text-stone-400 text-[11px] mt-0.5">
+          <p className="text-stone-400 dark:text-stone-500 text-[11px] mt-0.5">
             © {new Date().getFullYear()} Friends 4 Ever Coffee Cafe. All rights reserved.
           </p>
         </div>

@@ -39,20 +39,20 @@ export const VideoModal: React.FC<VideoModalProps> = ({
       id="video-preview-modal"
     >
       <div
-        className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl border border-stone-100"
+        className="relative w-full max-w-md bg-white dark:bg-stone-900 rounded-3xl overflow-hidden shadow-2xl border border-stone-100 dark:border-stone-800 text-stone-900 dark:text-stone-100"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-stone-100 bg-stone-50/80">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-850">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
-              <Play className="w-4 h-4 fill-rose-600" />
+            <div className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+              <Play className="w-4 h-4 fill-rose-600 dark:fill-rose-400" />
             </div>
             <div>
-              <h3 className="font-bold text-stone-900 text-base leading-tight">
+              <h3 className="font-bold text-stone-900 dark:text-white text-base leading-tight">
                 {itemName}
               </h3>
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-stone-500 dark:text-stone-400">
                 {isInstagram ? 'Instagram Video Showcase' : 'Dish Video / Review'}
               </p>
             </div>
@@ -61,7 +61,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-4 h-4" />
@@ -71,15 +71,15 @@ export const VideoModal: React.FC<VideoModalProps> = ({
         {/* Modal Body */}
         <div className="p-6 text-center">
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 p-0.5 mx-auto mb-4 shadow-md flex items-center justify-center">
-            <div className="w-full h-full bg-white rounded-[14px] flex items-center justify-center">
+            <div className="w-full h-full bg-white dark:bg-stone-900 rounded-[14px] flex items-center justify-center">
               <Play className="w-9 h-9 text-rose-500 fill-rose-500 ml-1" />
             </div>
           </div>
 
-          <h4 className="font-extrabold text-stone-900 text-lg mb-1">
+          <h4 className="font-extrabold text-stone-900 dark:text-white text-lg mb-1">
             Watch Fresh Dish Preparation
           </h4>
-          <p className="text-xs text-stone-600 mb-6 max-w-xs mx-auto leading-relaxed">
+          <p className="text-xs text-stone-600 dark:text-stone-400 mb-6 max-w-xs mx-auto leading-relaxed">
             See how our culinary chefs prepare <strong>{itemName}</strong> fresh to order with authentic ingredients.
           </p>
 
