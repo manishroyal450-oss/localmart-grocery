@@ -1,8 +1,21 @@
-import React, { useRef } from 'react';
-import { ChevronLeft, ChevronRight, Star, Zap, Play, ExternalLink, Sparkles } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Star,
+  Zap,
+  Play,
+  ExternalLink,
+  Sparkles,
+  ShoppingCart,
+  Plus,
+  Minus,
+  ChevronDown,
+} from 'lucide-react';
 import { MenuItem } from '../types';
 import SmartPricingBadge from './SmartPricingBadge';
 import { getItemImageUrl } from '../services/menuService';
+import { getAvailableVariants } from '../services/cartService';
 
 interface HorizontalDishesRowProps {
   title: string;
@@ -10,6 +23,9 @@ interface HorizontalDishesRowProps {
   items: MenuItem[];
   onOpenVideo?: (videoUrl: string, itemName: string) => void;
   onPreviewImage?: (imageUrl: string, itemName: string) => void;
+  onAddToCart?: (item: MenuItem, variant?: string, price?: number) => void;
+  getItemQuantity?: (itemId: string | number) => number;
+  onUpdateQuantity?: (item: MenuItem, delta: number) => void;
 }
 
 export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
@@ -18,8 +34,12 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
   items,
   onOpenVideo,
   onPreviewImage,
+  onAddToCart,
+  getItemQuantity,
+  onUpdateQuantity,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [activePickerId, setActivePickerId] = useState<string | number | null>(null);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -31,7 +51,7 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
   if (!items || items.length === 0) return null;
 
   return (
-    <section className="my-6 relative">
+    <section className="my-6 relative w-full max-w-full overflow-hidden">
       <div className="flex items-center justify-between mb-3 px-1">
         <div>
           <div className="flex items-center gap-2">
@@ -71,13 +91,30 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
       {/* Horizontal Side-Scrollable Track */}
       <div
         ref={scrollRef}
-        className="flex items-stretch gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-2 px-1"
+        className="flex items-stretch gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-2 px-1 w-full min-w-0"
       >
         {items.map((item, idx) => {
           const imageUrl = getItemImageUrl(item);
           const hasVideo = Boolean(item.videoUrl && item.videoUrl.trim().length > 0);
-          // Deterministic rating based on item id for realistic cafe feel
-          const rating = (4.0 + ((item.id * 7) % 10) / 10).toFixed(1);
+          const numId =
+            typeof item.id === 'number'
+              ? item.id
+              : parseInt(String(item.id).replace(/\D/g, ''), 10) || 4;
+          const rating = (4.0 + ((numId * 7) % 10) / 10).toFixed(1);
+          const quantity = getItemQuantity ? getItemQuantity(item.id) : 0;
+          const variants = getAvailableVariants(item);
+          const hasMultipleVariants = variants.length > 1;
+          const isPickerOpen = activePickerId === item.id;
+
+          const handleAddClick = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            if (hasMultipleVariants) {
+              setActivePickerId(isPickerOpen ? null : item.id);
+            } else {
+              const defaultVariant = variants[0];
+              onAddToCart?.(item, defaultVariant?.label, defaultVariant?.price);
+            }
+          };
 
           return (
             <div
@@ -109,7 +146,7 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
                   </span>
                 </div>
 
-                {/* Video Reel Button */}
+                {/* Video Button */}
                 {hasVideo && (
                   <button
                     type="button"
@@ -118,9 +155,10 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
                       onOpenVideo?.(item.videoUrl!, item.name);
                     }}
                     className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-white/95 hover:bg-white px-2.5 py-1 rounded-full shadow-sm cursor-pointer border border-rose-100 active:scale-95"
+                    title="Watch Video"
                   >
                     <Play className="w-2.5 h-2.5 fill-rose-600 text-rose-600" />
-                    <span>Reel</span>
+                    <span>Video</span>
                     <ExternalLink className="w-2.5 h-2.5 opacity-60" />
                   </button>
                 )}
@@ -161,15 +199,90 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
                     {item.notes && (
                       <>
                         <span className="text-stone-300">•</span>
-                        <span className="truncate text-stone-500 max-w-[120px]">{item.notes}</span>
+                        <span className="truncate text-stone-500 max-w-[120px]">
+                          {item.notes}
+                        </span>
                       </>
                     )}
                   </div>
                 </div>
 
-                {/* Price Badge */}
-                <div className="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between">
-                  <SmartPricingBadge item={item} />
+                {/* Price & Add to Cart */}
+                <div className="mt-3 pt-2.5 border-t border-stone-100 flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <div className="min-w-0">
+                      <SmartPricingBadge item={item} />
+                    </div>
+
+                    {quantity > 0 ? (
+                      <div className="flex items-center rounded-xl bg-stone-900 text-white p-0.5 shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUpdateQuantity?.(item, -1);
+                          }}
+                          className="w-6 h-6 rounded-lg hover:bg-stone-800 flex items-center justify-center transition-colors cursor-pointer active:scale-90"
+                          title="Reduce"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="w-6 text-center font-black text-xs text-white">
+                          {quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUpdateQuantity?.(item, 1);
+                          }}
+                          className="w-6 h-6 rounded-lg bg-rose-600 hover:bg-rose-500 flex items-center justify-center transition-colors cursor-pointer active:scale-90"
+                          title="Add more"
+                        >
+                          <Plus className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleAddClick}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-300 hover:border-rose-600 text-[11px] font-black transition-all shadow-2xs active:scale-95 cursor-pointer"
+                        title="Add to Cart 🛒"
+                      >
+                        <ShoppingCart className="w-3 h-3" />
+                        <span>ADD 🛒</span>
+                        {hasMultipleVariants && (
+                          <ChevronDown className="w-2.5 h-2.5 opacity-60" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Variant Selector Popup */}
+                  {isPickerOpen && hasMultipleVariants && (
+                    <div className="p-1.5 bg-stone-50 rounded-xl border border-stone-200 animate-in fade-in zoom-in-95 duration-150">
+                      <span className="block text-[9px] font-bold text-stone-500 uppercase tracking-wider mb-1">
+                        Select Option 🛒
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {variants.map((v) => (
+                          <button
+                            key={v.label}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActivePickerId(null);
+                              onAddToCart?.(item, v.label, v.price);
+                            }}
+                            className="flex-1 min-w-[60px] py-0.5 px-1.5 rounded-lg bg-white hover:bg-rose-600 text-stone-800 hover:text-white border border-stone-200 hover:border-rose-600 text-[10px] font-bold transition-all shadow-2xs flex items-center justify-between gap-1 cursor-pointer"
+                          >
+                            <span>{v.label}</span>
+                            <span className="font-black">₹{v.price}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

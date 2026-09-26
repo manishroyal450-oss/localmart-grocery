@@ -496,12 +496,12 @@ export default function RestaurantPage({
           </p>
         </div>
         <a
-          href="https://wa.me/917500236520?text=Hi%20Bari%20Restaurant,%20I%20would%20like%20to%20order%20food"
+          href="https://wa.me/919719852037?text=Hi%20Friends%204%20Ever%20Cafe,%20I%20would%20like%20to%20order%20food"
           target="_blank"
           rel="noopener noreferrer"
           className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-gray-950 font-black text-xs rounded-xl shadow-md transition flex items-center gap-2 whitespace-nowrap cursor-pointer"
         >
-          <span>💬 Order via WhatsApp (+91 75002 36520)</span>
+          <span>💬 Order via WhatsApp (+91 97198 52037)</span>
         </a>
       </div>
 

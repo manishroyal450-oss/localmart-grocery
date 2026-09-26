@@ -342,7 +342,7 @@ export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess, init
                     <input
                       type="tel"
                       required
-                      placeholder="9027304872"
+                      placeholder="9719852037"
                       className="w-full pl-10 pr-4 py-2.5 bg-[#17191b] border border-gray-800 rounded-lg text-sm text-white placeholder-gray-600 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 focus:outline-none transition font-medium font-mono"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}

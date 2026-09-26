@@ -52,6 +52,14 @@ export interface CartItem {
   quantity: number;
 }
 
+export interface CafeCartItem {
+  cartItemId: string;
+  item: MenuItem;
+  variant?: string;
+  price: number;
+  quantity: number;
+}
+
 export interface OrderItem {
   id: string;
   name: string;

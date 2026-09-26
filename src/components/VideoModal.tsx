@@ -53,7 +53,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({
                 {itemName}
               </h3>
               <p className="text-xs text-stone-500">
-                {isInstagram ? 'Instagram Reel Showcase' : 'Video Reel / Review'}
+                {isInstagram ? 'Instagram Video Showcase' : 'Dish Video / Review'}
               </p>
             </div>
           </div>

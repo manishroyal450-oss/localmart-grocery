@@ -1043,7 +1043,7 @@ export default function GroceryCatalog({
             <h2 className="text-2xl font-black tracking-tight text-white mb-2 leading-none flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
               <span>Bari' All-In-One Mart</span>
               <span className="text-xs font-normal text-slate-400 font-mono hidden sm:inline">|</span>
-              <span className="text-sm font-bold text-yellow-400 font-mono sm:mt-1">+91 75002 36520</span>
+              <span className="text-sm font-bold text-yellow-400 font-mono sm:mt-1">+91 97198 52037</span>
             </h2>
 
             <p className="text-xs text-slate-300 leading-relaxed max-w-xl mb-4 font-medium">
@@ -1097,7 +1097,7 @@ export default function GroceryCatalog({
                   </button>
                 )}
                 <a 
-                  href="https://wa.me/917500236520" 
+                  href="https://wa.me/919719852037" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-black text-white rounded-lg shadow transition cursor-pointer"

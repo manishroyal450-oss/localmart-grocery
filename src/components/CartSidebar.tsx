@@ -92,7 +92,7 @@ export default function CartSidebar({
       `\nThank you! Please process my order as soon as possible. 🙏`;
 
     const encodedMessage = encodeURIComponent(messageText);
-    window.open(`https://wa.me/919027304872?text=${encodedMessage}`, '_blank');
+    window.open(`https://wa.me/919719852037?text=${encodedMessage}`, '_blank');
   };
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
@@ -195,8 +195,8 @@ export default function CartSidebar({
                   </div>
                   <p className="text-[11px] text-gray-500 mt-1 font-semibold leading-relaxed">
                     Need fast dispatch or home delivery? <br />
-                    Call us: <a href="tel:+917500236520" className="text-emerald-800 font-black hover:underline font-mono">+91 75002 36520</a> <br />
-                    WhatsApp: <a href="https://wa.me/917500236520" target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-black hover:underline font-mono">+91 75002 36520</a>
+                    Call us: <a href="tel:+919719852037" className="text-emerald-800 font-black hover:underline font-mono">+91 97198 52037</a> <br />
+                    WhatsApp: <a href="https://wa.me/919719852037" target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-black hover:underline font-mono">+91 97198 52037</a>
                   </p>
                 </div>
                 

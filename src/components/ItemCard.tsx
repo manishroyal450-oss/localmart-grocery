@@ -92,17 +92,17 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onOpenVideo, onPreview
             </span>
           </div>
 
-          {/* Video / Reel Button if present */}
+          {/* Video Button if present */}
           {hasVideo && (
             <button
               id={`btn-video-${item.id}`}
               type="button"
               onClick={handleVideoClick}
               className="pointer-events-auto inline-flex items-center gap-1 text-[11px] font-extrabold text-rose-600 bg-white/95 hover:bg-white border border-rose-200/80 px-2.5 py-1 rounded-full shadow-md transition-all active:scale-95 cursor-pointer"
-              title="Watch Instagram Reel / Video"
+              title="Watch Video"
             >
               <Play className="w-3 h-3 fill-rose-600 text-rose-600" />
-              <span>Reel</span>
+              <span>Video</span>
               <ExternalLink className="w-2.5 h-2.5 opacity-60 ml-0.5" />
             </button>
           )}

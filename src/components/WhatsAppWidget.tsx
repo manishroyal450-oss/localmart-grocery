@@ -39,7 +39,7 @@ export default function WhatsAppWidget({ currentCustomer }: WhatsAppWidgetProps)
 
     const encodedText = encodeURIComponent(finalMsg);
     // WhatsApp URL API (Demonstrating direct merchant connect link)
-    const whatsappUrl = `https://wa.me/917500236520?text=${encodedText}`;
+    const whatsappUrl = `https://wa.me/919719852037?text=${encodedText}`;
     
     window.open(whatsappUrl, '_blank');
     setMessage('');

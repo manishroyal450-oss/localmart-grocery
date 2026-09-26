@@ -25,13 +25,13 @@ export const CircularCategoryBar: React.FC<CircularCategoryBarProps> = ({
   const allCategories = ['All', ...categories];
 
   return (
-    <div className="w-full bg-white border-b border-stone-100 py-3 relative">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 relative flex items-center">
+    <div className="w-full max-w-full bg-white border-b border-stone-100 py-3 relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 relative flex items-center w-full min-w-0">
         {/* Left Arrow */}
         <button
           type="button"
           onClick={() => scroll('left')}
-          className="hidden md:flex absolute -left-2 z-10 w-8 h-8 rounded-full bg-white shadow-md border border-stone-200 items-center justify-center text-stone-700 hover:text-stone-900 transition-all cursor-pointer hover:scale-105"
+          className="hidden md:flex absolute left-1 z-10 w-8 h-8 rounded-full bg-white shadow-md border border-stone-200 items-center justify-center text-stone-700 hover:text-stone-900 transition-all cursor-pointer hover:scale-105"
           aria-label="Scroll left"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -40,7 +40,7 @@ export const CircularCategoryBar: React.FC<CircularCategoryBarProps> = ({
         {/* Scrollable Container */}
         <div
           ref={scrollRef}
-          className="flex items-center gap-4 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth w-full px-2 py-1"
+          className="flex items-center gap-4 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth w-full min-w-0 px-2 py-1"
           role="tablist"
         >
           {allCategories.map((cat) => {
@@ -98,7 +98,7 @@ export const CircularCategoryBar: React.FC<CircularCategoryBarProps> = ({
         <button
           type="button"
           onClick={() => scroll('right')}
-          className="hidden md:flex absolute -right-2 z-10 w-8 h-8 rounded-full bg-white shadow-md border border-stone-200 items-center justify-center text-stone-700 hover:text-stone-900 transition-all cursor-pointer hover:scale-105"
+          className="hidden md:flex absolute right-1 z-10 w-8 h-8 rounded-full bg-white shadow-md border border-stone-200 items-center justify-center text-stone-700 hover:text-stone-900 transition-all cursor-pointer hover:scale-105"
           aria-label="Scroll right"
         >
           <ChevronRight className="w-4 h-4" />

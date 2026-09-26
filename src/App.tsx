@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { MenuItem } from './types';
+import { MenuItem, CafeCartItem } from './types';
 import { fetchMenuData, getCategoryIcon } from './services/menuService';
 import { ZomatoHeader, GOOGLE_MAPS_URL, CAFE_FULL_ADDRESS } from './components/ZomatoHeader';
 import ZomatoBanner from './components/ZomatoBanner';
@@ -11,6 +11,16 @@ import ErrorAlert from './components/ErrorAlert';
 import VideoModal from './components/VideoModal';
 import ImagePreviewModal from './components/ImagePreviewModal';
 import ProfileModal from './components/ProfileModal';
+import CafeCartDrawer from './components/CafeCartDrawer';
+import CafeNavigationBar from './components/CafeNavigationBar';
+import CartToast, { ToastPayload } from './components/CartToast';
+import {
+  loadCartFromStorage,
+  saveCartToStorage,
+  calculateCartSummary,
+  getItemBasePrice,
+  getCartItemId,
+} from './services/cartService';
 import { UserProfile, getCurrentUser } from './services/authService';
 import { SearchX, ArrowUp, Sparkles, Play, Flame, Zap, CheckCircle2, MapPin } from 'lucide-react';
 
@@ -26,10 +36,16 @@ export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => getCurrentUser());
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
 
+  // Cart State & Cart Drawer
+  const [cartItems, setCartItems] = useState<CafeCartItem[]>(() => loadCartFromStorage());
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [activeNavTab, setActiveNavTab] = useState<'home' | 'cart' | 'profile'>('home');
+  const [cartToast, setCartToast] = useState<ToastPayload | null>(null);
+
+  // Filter & Search states
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'reels' | 'popular' | 'fast'>('all');
-  const [vegOnly, setVegOnly] = useState<boolean>(true);
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
 
   // Video modal state
@@ -45,6 +61,17 @@ export const App: React.FC = () => {
     url: '',
     name: '',
   });
+
+  // Persist cart changes
+  useEffect(() => {
+    saveCartToStorage(cartItems);
+  }, [cartItems]);
+
+  // Cart summary calculations
+  const { totalItems: cartCount, grandTotal: cartTotalAmount } = useMemo(
+    () => calculateCartSummary(cartItems),
+    [cartItems]
+  );
 
   // Fetch menu data from Google Sheet
   const loadMenu = useCallback(async (isManualRefresh = false) => {
@@ -95,10 +122,9 @@ export const App: React.FC = () => {
     return Array.from(set);
   }, [items]);
 
-  // Spotlight items for the Horizontal Scroll Row (Hand-picked diverse highlights)
+  // Spotlight items for the Horizontal Scroll Row
   const spotlightItems = useMemo(() => {
     if (items.length === 0) return [];
-    // Prioritize items with videos or special notes, or top signature items
     const withVideos = items.filter((i) => i.videoUrl && i.videoUrl.trim().length > 0);
     const signaturePicks = items.filter(
       (i) =>
@@ -110,7 +136,7 @@ export const App: React.FC = () => {
     );
 
     const combined = [...withVideos, ...signaturePicks];
-    const uniqueIds = new Set<number>();
+    const uniqueIds = new Set<string | number>();
     const result: MenuItem[] = [];
 
     for (const item of combined) {
@@ -127,20 +153,17 @@ export const App: React.FC = () => {
   // Filtered items based on Category, Search Query, and Quick Chips
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
-      // Category filter
       if (selectedCategory !== 'All' && item.category !== selectedCategory) {
         return false;
       }
 
-      // Quick chip filter
       if (activeFilter === 'reels' && (!item.videoUrl || item.videoUrl.trim().length === 0)) {
         return false;
       }
-      if (activeFilter === 'popular' && item.id % 2 !== 0 && !item.videoUrl) {
+      if (activeFilter === 'popular' && (Number(item.id) || 1) % 2 !== 0 && !item.videoUrl) {
         return false;
       }
 
-      // Search filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
         const matchesName = item.name.toLowerCase().includes(query);
@@ -169,6 +192,132 @@ export const App: React.FC = () => {
     return groups;
   }, [items, selectedCategory, searchQuery, activeFilter, categories]);
 
+  // ================= CART ACTION HANDLERS =================
+  const handleAddToCart = useCallback(
+    (item: MenuItem, variant?: string, price?: number) => {
+      const finalPrice = price || getItemBasePrice(item, variant);
+      const cartItemId = getCartItemId(item.id, variant);
+
+      setCartItems((prev) => {
+        const existingIdx = prev.findIndex((ci) => ci.cartItemId === cartItemId);
+        if (existingIdx > -1) {
+          const next = [...prev];
+          next[existingIdx] = {
+            ...next[existingIdx],
+            quantity: next[existingIdx].quantity + 1,
+          };
+          return next;
+        }
+        return [
+          ...prev,
+          {
+            cartItemId,
+            item,
+            variant: variant || 'Standard',
+            price: finalPrice,
+            quantity: 1,
+          },
+        ];
+      });
+
+      // Show Toast Notification
+      const newTotalItems = cartCount + 1;
+      const newTotalAmount = cartTotalAmount + finalPrice;
+
+      setCartToast({
+        id: Date.now(),
+        item,
+        variant,
+        price: finalPrice,
+        quantityAdded: 1,
+        totalCartItems: newTotalItems,
+        cartTotalAmount: newTotalAmount,
+      });
+    },
+    [cartCount, cartTotalAmount]
+  );
+
+  const handleUpdateCartQuantity = useCallback((cartItemId: string, delta: number) => {
+    setCartItems((prev) => {
+      return prev
+        .map((ci) => {
+          if (ci.cartItemId === cartItemId) {
+            const nextQty = ci.quantity + delta;
+            return nextQty > 0 ? { ...ci, quantity: nextQty } : null;
+          }
+          return ci;
+        })
+        .filter(Boolean) as CafeCartItem[];
+    });
+  }, []);
+
+  const handleUpdateItemQuantity = useCallback(
+    (item: MenuItem, delta: number) => {
+      const cleanId = String(item.id).replace(/\s+/g, '-');
+      if (delta > 0) {
+        handleAddToCart(item);
+      } else {
+        // Find existing cart item matching this item id and decrement
+        const target = cartItems.find(
+          (ci) => String(ci.item.id).replace(/\s+/g, '-') === cleanId
+        );
+        if (target) {
+          handleUpdateCartQuantity(target.cartItemId, -1);
+        }
+      }
+    },
+    [cartItems, handleAddToCart, handleUpdateCartQuantity]
+  );
+
+  const handleRemoveItem = useCallback((cartItemId: string) => {
+    setCartItems((prev) => prev.filter((ci) => ci.cartItemId !== cartItemId));
+  }, []);
+
+  const handleClearCart = useCallback(() => {
+    setCartItems([]);
+  }, []);
+
+  const getItemQuantity = useCallback(
+    (itemId: string | number): number => {
+      const cleanId = String(itemId).replace(/\s+/g, '-');
+      return cartItems
+        .filter((ci) => String(ci.item.id).replace(/\s+/g, '-') === cleanId)
+        .reduce((sum, ci) => sum + ci.quantity, 0);
+    },
+    [cartItems]
+  );
+
+  // ================= NAVIGATION HANDLERS =================
+  const handleGoHome = useCallback(() => {
+    setActiveNavTab('home');
+    setSelectedCategory('All');
+    setSearchQuery('');
+    setActiveFilter('all');
+    setIsCartOpen(false);
+    setIsProfileOpen(false);
+    scrollToTop();
+  }, []);
+
+  const handleOpenCart = useCallback(() => {
+    setActiveNavTab('cart');
+    setIsCartOpen(true);
+  }, []);
+
+  const handleCloseCart = useCallback(() => {
+    setIsCartOpen(false);
+    setActiveNavTab('home');
+  }, []);
+
+  const handleOpenProfile = useCallback(() => {
+    setActiveNavTab('profile');
+    setIsProfileOpen(true);
+  }, []);
+
+  const handleCloseProfile = useCallback(() => {
+    setIsProfileOpen(false);
+    setActiveNavTab('home');
+  }, []);
+
   const handleOpenVideo = (videoUrl: string, itemName: string) => {
     setVideoModal({
       isOpen: true,
@@ -182,17 +331,21 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-stone-50 text-stone-900 selection:bg-rose-100 selection:text-rose-900">
-      {/* 1. Zomato Top Header (Brand, Location, Search Bar, Profile Action) */}
+    <div className="min-h-screen flex flex-col bg-stone-50 text-stone-900 selection:bg-rose-100 selection:text-rose-900 overflow-x-hidden w-full max-w-full pb-28 sm:pb-20">
+      {/* 1. Zomato Top Header (Brand, Location, Search Bar, Navigation Pills: Home, Cart, Profile) */}
       <ZomatoHeader
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         currentUser={currentUser}
-        onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenProfile={handleOpenProfile}
+        onGoHome={handleGoHome}
+        onOpenCart={handleOpenCart}
+        cartCount={cartCount}
+        activeTab={activeNavTab}
       />
 
       {/* 2. Zomato Banner (Promotional Gold / Cafe Delights Banner) */}
-      <div className="max-w-7xl mx-auto w-full px-3.5 sm:px-6">
+      <div className="max-w-7xl mx-auto w-full px-3.5 sm:px-6 overflow-hidden">
         <ZomatoBanner />
       </div>
 
@@ -210,58 +363,60 @@ export const App: React.FC = () => {
 
       {/* 4. Quick Filter Chips (Zomato-style Pill Filters) */}
       {!loading && !error && items.length > 0 && (
-        <div className="max-w-7xl mx-auto w-full px-3.5 sm:px-6 mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-          <button
-            type="button"
-            onClick={() => setActiveFilter('all')}
-            className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-              activeFilter === 'all'
-                ? 'bg-stone-900 text-white shadow-xs'
-                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>All Items</span>
-          </button>
+        <div className="max-w-7xl mx-auto w-full px-3.5 sm:px-6 mt-3 overflow-hidden">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 w-full min-w-0">
+            <button
+              type="button"
+              onClick={() => setActiveFilter('all')}
+              className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                activeFilter === 'all'
+                  ? 'bg-stone-900 text-white shadow-xs'
+                  : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>All Items</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveFilter('reels')}
-            className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-              activeFilter === 'reels'
-                ? 'bg-rose-600 text-white shadow-xs'
-                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
-            }`}
-          >
-            <Play className="w-3.5 h-3.5 fill-current text-rose-500" />
-            <span>With Video Reels</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('reels')}
+              className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                activeFilter === 'reels'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+              }`}
+            >
+              <Play className="w-3.5 h-3.5 fill-current text-rose-500" />
+              <span>With Videos</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveFilter('popular')}
-            className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-              activeFilter === 'popular'
-                ? 'bg-amber-600 text-white shadow-xs'
-                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
-            }`}
-          >
-            <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-            <span>Chef's Choice</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('popular')}
+              className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                activeFilter === 'popular'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <span>Chef's Choice</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveFilter('fast')}
-            className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-              activeFilter === 'fast'
-                ? 'bg-emerald-700 text-white shadow-xs'
-                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" />
-            <span>Near & Fast</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('fast')}
+              className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                activeFilter === 'fast'
+                  ? 'bg-emerald-700 text-white shadow-xs'
+                  : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" />
+              <span>Near & Fast</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -287,6 +442,9 @@ export const App: React.FC = () => {
             items={spotlightItems}
             onOpenVideo={handleOpenVideo}
             onPreviewImage={(url, name) => setPreviewModal({ isOpen: true, url, name })}
+            onAddToCart={handleAddToCart}
+            getItemQuantity={getItemQuantity}
+            onUpdateQuantity={handleUpdateItemQuantity}
           />
         )}
 
@@ -386,6 +544,9 @@ export const App: React.FC = () => {
                             onPreviewImage={(url, name) =>
                               setPreviewModal({ isOpen: true, url, name })
                             }
+                            onAddToCart={handleAddToCart}
+                            cartQuantity={getItemQuantity(item.id)}
+                            onUpdateQuantity={(delta) => handleUpdateItemQuantity(item, delta)}
                           />
                         ))}
                       </div>
@@ -431,6 +592,9 @@ export const App: React.FC = () => {
                       onPreviewImage={(url, name) =>
                         setPreviewModal({ isOpen: true, url, name })
                       }
+                      onAddToCart={handleAddToCart}
+                      cartQuantity={getItemQuantity(item.id)}
+                      onUpdateQuantity={(delta) => handleUpdateItemQuantity(item, delta)}
                     />
                   ))}
                 </div>
@@ -480,13 +644,43 @@ export const App: React.FC = () => {
           id="btn-scroll-top"
           type="button"
           onClick={scrollToTop}
-          className="fixed bottom-6 right-6 z-40 p-3 rounded-full bg-rose-600 text-white shadow-lg hover:bg-rose-700 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+          className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-30 p-2.5 sm:p-3 rounded-full bg-stone-900 text-white shadow-lg hover:bg-stone-800 hover:scale-105 active:scale-95 transition-all cursor-pointer border border-stone-700"
           title="Back to top"
           aria-label="Back to top"
         >
-          <ArrowUp className="w-5 h-5" />
+          <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       )}
+
+      {/* ================= NAVIGATION BAR (Home, Cart Section, Profile Section) ================= */}
+      <CafeNavigationBar
+        activeTab={activeNavTab}
+        cartCount={cartCount}
+        cartTotalAmount={cartTotalAmount}
+        onGoHome={handleGoHome}
+        onOpenCart={handleOpenCart}
+        onOpenProfile={handleOpenProfile}
+        currentUser={currentUser}
+      />
+
+      {/* ================= CART SECTION DRAWER ================= */}
+      <CafeCartDrawer
+        isOpen={isCartOpen}
+        onClose={handleCloseCart}
+        cartItems={cartItems}
+        onUpdateQuantity={handleUpdateCartQuantity}
+        onRemoveItem={handleRemoveItem}
+        onClearCart={handleClearCart}
+        currentUser={currentUser}
+        onOpenProfile={handleOpenProfile}
+      />
+
+      {/* ================= ADD TO CART NOTIFICATION TOAST ================= */}
+      <CartToast
+        toast={cartToast}
+        onClose={() => setCartToast(null)}
+        onOpenCart={handleOpenCart}
+      />
 
       {/* Video / Reel Player Modal */}
       <VideoModal
@@ -507,14 +701,13 @@ export const App: React.FC = () => {
       {/* User Profile, Sign Up & Login Modal */}
       <ProfileModal
         isOpen={isProfileOpen}
-        onClose={() => setIsProfileOpen(false)}
+        onClose={handleCloseProfile}
         currentUser={currentUser}
         onAuthSuccess={(user) => {
           setCurrentUser(user);
           if (user) {
-            // keep open brief moment or close
             setTimeout(() => {
-              setIsProfileOpen(false);
+              handleCloseProfile();
             }, 700);
           }
         }}

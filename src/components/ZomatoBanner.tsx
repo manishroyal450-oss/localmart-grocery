@@ -8,7 +8,7 @@ interface ZomatoBannerProps {
 
 export const ZomatoBanner: React.FC<ZomatoBannerProps> = ({ onExploreClick }) => {
   return (
-    <div className="w-full my-3 px-3 sm:px-0">
+    <div className="w-full my-2.5 max-w-full overflow-hidden">
       <div className="relative overflow-hidden rounded-2xl bg-stone-950 text-white p-4 sm:p-6 shadow-md border border-stone-800">
         {/* User's Original Cafe Interior Image with Increased Visibility */}
         <div className="absolute inset-0 z-0">

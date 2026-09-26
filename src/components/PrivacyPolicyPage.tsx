@@ -249,7 +249,7 @@ export default function PrivacyPolicyPage({ onBack }: PrivacyPolicyPageProps) {
 
                 <div className="space-y-1">
                   <p className="text-gray-400 font-semibold uppercase text-[10px]">Phone & WhatsApp Support:</p>
-                  <p className="text-yellow-400 font-bold font-mono">+91 75002 36520</p>
+                  <p className="text-yellow-400 font-bold font-mono">+91 97198 52037</p>
                 </div>
 
                 <div className="space-y-1 md:col-span-2 pt-1 border-t border-gray-800">

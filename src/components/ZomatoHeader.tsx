@@ -1,5 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, Search, Mic, MicOff, X, ExternalLink, User, Volume2, AlertCircle, RefreshCw, HelpCircle } from 'lucide-react';
+import {
+  MapPin,
+  Search,
+  Mic,
+  MicOff,
+  X,
+  ExternalLink,
+  User,
+  Volume2,
+  AlertCircle,
+  RefreshCw,
+  HelpCircle,
+  Home,
+  ShoppingCart,
+} from 'lucide-react';
 import { UserProfile } from '../services/authService';
 
 interface ZomatoHeaderProps {
@@ -7,6 +21,10 @@ interface ZomatoHeaderProps {
   onSearchChange: (query: string) => void;
   currentUser?: UserProfile | null;
   onOpenProfile?: () => void;
+  onGoHome?: () => void;
+  onOpenCart?: () => void;
+  cartCount?: number;
+  activeTab?: 'home' | 'cart' | 'profile';
   vegOnly?: boolean;
   onToggleVegOnly?: () => void;
   onRefresh?: () => void;
@@ -24,6 +42,10 @@ export const ZomatoHeader: React.FC<ZomatoHeaderProps> = ({
   onSearchChange,
   currentUser,
   onOpenProfile,
+  onGoHome,
+  onOpenCart,
+  cartCount = 0,
+  activeTab = 'home',
 }) => {
   const [isListening, setIsListening] = useState<boolean>(false);
   const [micStatusMsg, setMicStatusMsg] = useState<string | null>(null);
@@ -169,7 +191,7 @@ export const ZomatoHeader: React.FC<ZomatoHeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs w-full max-w-full overflow-x-clip">
       <div className="max-w-7xl mx-auto px-3.5 sm:px-6 pt-3 pb-2.5">
         {/* Top Location Link to Google Maps + Profile Section */}
         <div className="flex items-center justify-between gap-3 mb-2.5">
@@ -178,14 +200,14 @@ export const ZomatoHeader: React.FC<ZomatoHeaderProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             title={`Click to open Google Maps: ${CAFE_FULL_ADDRESS}`}
-            className="group flex items-start gap-2.5 min-w-0 flex-1 -m-1.5 p-1.5 rounded-xl hover:bg-stone-50 active:bg-stone-100 transition-all cursor-pointer select-none"
+            className="group flex items-start gap-2.5 min-w-0 flex-1 p-1 rounded-xl hover:bg-stone-50 active:bg-stone-100 transition-all cursor-pointer select-none"
           >
             <div className="w-9 h-9 rounded-full bg-rose-50 group-hover:bg-rose-100 border border-rose-200/80 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-2xs group-hover:scale-105 transition-all">
               <MapPin className="w-4 h-4 text-rose-600 group-hover:text-rose-700 animate-bounce [animation-duration:2s]" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <h1 className="text-base sm:text-lg font-black text-stone-900 group-hover:text-rose-600 transition-colors truncate">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h1 className="text-sm xs:text-base sm:text-lg font-black text-stone-900 group-hover:text-rose-600 transition-colors leading-tight">
                   Friends 4 Ever Coffee Cafe
                 </h1>
                 <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded-md flex-shrink-0">
@@ -203,20 +225,25 @@ export const ZomatoHeader: React.FC<ZomatoHeaderProps> = ({
             </div>
           </a>
 
-          {/* Profile / Account Action Button (Circled Position) */}
+          {/* Profile / Account Action Button */}
           <button
             type="button"
             onClick={onOpenProfile}
-            className="flex-shrink-0 flex items-center gap-2 pl-2 pr-2.5 sm:pl-2.5 sm:pr-3 py-1.5 rounded-full bg-white hover:bg-rose-50/70 border border-stone-200 hover:border-rose-300 shadow-2xs transition-all cursor-pointer group active:scale-95"
-            title={currentUser ? `Logged in as ${currentUser.fullName} (Click to view profile)` : 'Log In / Sign Up'}
+            id="header-profile-btn"
+            className="flex-shrink-0 flex items-center gap-2 p-1 sm:px-2.5 sm:py-1.5 rounded-full bg-white hover:bg-rose-50/70 border border-stone-200 hover:border-rose-300 shadow-2xs transition-all cursor-pointer group active:scale-95 ml-2"
+            title={
+              currentUser
+                ? `Logged in as ${currentUser.fullName} (Click to view profile)`
+                : 'Log In / Sign Up'
+            }
           >
             {currentUser ? (
               <>
-                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-rose-600 to-rose-500 text-white font-black text-xs flex items-center justify-center shadow-xs">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-rose-600 to-rose-500 text-white font-black text-xs flex items-center justify-center shadow-xs">
                   {currentUser.fullName.charAt(0).toUpperCase()}
                 </div>
-                <div className="text-left leading-tight hidden xs:block sm:block">
-                  <span className="text-xs font-bold text-stone-900 group-hover:text-rose-600 block truncate max-w-[85px] sm:max-w-[110px]">
+                <div className="text-left leading-tight hidden md:block">
+                  <span className="text-xs font-bold text-stone-900 group-hover:text-rose-600 block truncate max-w-[95px]">
                     {currentUser.fullName.split(' ')[0]}
                   </span>
                   <span className="text-[10px] text-emerald-600 font-bold block">
@@ -226,10 +253,10 @@ export const ZomatoHeader: React.FC<ZomatoHeaderProps> = ({
               </>
             ) : (
               <>
-                <div className="w-7 h-7 rounded-full bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors flex items-center justify-center border border-rose-200">
-                  <User className="w-3.5 h-3.5" />
+                <div className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors flex items-center justify-center border border-rose-200">
+                  <User className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-bold text-stone-800 group-hover:text-rose-600">
+                <span className="text-xs font-bold text-stone-800 group-hover:text-rose-600 hidden sm:inline mr-1">
                   Login
                 </span>
               </>
@@ -301,7 +328,7 @@ export const ZomatoHeader: React.FC<ZomatoHeaderProps> = ({
 
         {/* Live Mic Status Indicator / Prompt with Action Buttons */}
         {micStatusMsg && (
-          <div className="mt-2 p-2 sm:p-2.5 rounded-xl bg-stone-900 text-white text-[11px] sm:text-xs font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in slide-in-from-top-1 shadow-lg border border-stone-800">
+          <div className="mt-2 p-2 sm:p-2.5 rounded-xl bg-stone-900 text-white text-[11px] sm:text-xs font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in slide-in-from-top-1 shadow-lg border border-stone-800 w-full max-w-full overflow-hidden">
             <div className="flex items-center gap-2 min-w-0">
               {isListening ? (
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping flex-shrink-0" />
