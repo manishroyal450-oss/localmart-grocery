@@ -5,7 +5,6 @@ import {
   Plus,
   Minus,
   Trash2,
-  ArrowRight,
   Sparkles,
   MapPin,
   Phone,
@@ -15,11 +14,13 @@ import {
   MessageCircle,
   Receipt,
   RotateCcw,
+  Printer,
 } from 'lucide-react';
 import { MenuItem, CafeCartItem } from '../types';
 import { getItemImageUrl } from '../services/menuService';
 import { calculateCartSummary } from '../services/cartService';
 import { UserProfile } from '../services/authService';
+import { ProfessionalBillModal, BillData } from './ProfessionalBillModal';
 
 interface CafeCartDrawerProps {
   isOpen: boolean;
@@ -42,12 +43,14 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
   currentUser,
   onOpenProfile,
 }) => {
-  const [orderType, setOrderType] = useState<'dine-in' | 'takeaway' | 'delivery'>('dine-in');
+  const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>('dine-in');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [tableOrAddress, setTableOrAddress] = useState('');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [orderPlaced, setOrderPlaced] = useState<any | null>(null);
+  const [isBillModalOpen, setIsBillModalOpen] = useState<boolean>(false);
+  const [activeBillData, setActiveBillData] = useState<BillData | null>(null);
 
   // Pre-fill user data when currentUser changes or drawer opens
   useEffect(() => {
@@ -76,6 +79,65 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
   const { totalItems, subtotal, deliveryCharge, packagingCharge, grandTotal } =
     calculateCartSummary(cartItems);
 
+  // Open professional PDF bill preview for current cart items
+  const handleOpenCurrentBill = () => {
+    if (cartItems.length === 0) return;
+    const tempOrderId = `FFC-${Math.floor(100000 + Math.random() * 900000)}`;
+    setActiveBillData({
+      orderId: tempOrderId,
+      orderType,
+      customerName: customerName.trim() || (currentUser?.fullName ? currentUser.fullName : 'Guest'),
+      customerPhone: customerPhone.trim() || (currentUser?.contactNumber ? currentUser.contactNumber : ''),
+      tableOrAddress: tableOrAddress.trim() || (currentUser?.address ? currentUser.address : ''),
+      specialInstructions: specialInstructions.trim(),
+      items: cartItems.map((ci) => ({
+        name: ci.item.name,
+        variant: ci.variant,
+        quantity: ci.quantity,
+        price: ci.price,
+      })),
+      subtotal,
+      packagingCharge: 0,
+      grandTotal,
+      dateStr: new Date().toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }),
+      timeStr: new Date().toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      }),
+    });
+    setIsBillModalOpen(true);
+  };
+
+  // Open bill for placed order
+  const handleOpenPlacedOrderBill = () => {
+    if (!orderPlaced) return;
+    setActiveBillData({
+      orderId: orderPlaced.orderId,
+      orderType: orderPlaced.orderType || orderType,
+      customerName: orderPlaced.customerName || customerName.trim() || 'Guest',
+      customerPhone: orderPlaced.customerPhone || customerPhone.trim(),
+      tableOrAddress: orderPlaced.tableOrAddress || tableOrAddress.trim(),
+      specialInstructions: orderPlaced.specialInstructions || specialInstructions.trim(),
+      items: (orderPlaced.items || []).map((ci: any) => ({
+        name: ci.item?.name || ci.name || 'Dish Item',
+        variant: ci.variant,
+        quantity: ci.quantity,
+        price: ci.price,
+      })),
+      subtotal: orderPlaced.subtotal || orderPlaced.total,
+      packagingCharge: 0,
+      grandTotal: orderPlaced.total,
+      dateStr: orderPlaced.dateStr,
+      timeStr: orderPlaced.time,
+    });
+    setIsBillModalOpen(true);
+  };
+
   // Handle WhatsApp Checkout
   const handlePlaceOrderViaWhatsApp = () => {
     if (cartItems.length === 0) return;
@@ -90,9 +152,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
     const typeLabel =
       orderType === 'dine-in'
         ? '🍽️ Dine-In / Table Order'
-        : orderType === 'takeaway'
-        ? '🛍️ Takeaway / Pickup'
-        : '🛵 Home Delivery';
+        : '🛍️ Takeaway / Pickup';
 
     const orderId = `FFC-${Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -106,7 +166,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
       (tableOrAddress
         ? orderType === 'dine-in'
           ? `🪑 *Table No / Seat:* ${tableOrAddress}\n`
-          : `📍 *Address:* ${tableOrAddress}\n`
+          : `🛍️ *Pickup Note:* ${tableOrAddress}\n`
         : '') +
       (specialInstructions ? `📝 *Note:* ${specialInstructions}\n` : '') +
       `--------------------------------------\n` +
@@ -119,28 +179,27 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
     const encoded = encodeURIComponent(text);
     const cafePhone = '919719852037'; // +91 97198 52037 WhatsApp Order Number
 
-    // Set order placed state for UI feedback
+    // Set order placed state for UI feedback with full invoice data
     setOrderPlaced({
       orderId,
       items: [...cartItems],
+      subtotal,
       total: grandTotal,
+      orderType,
+      customerName: customerName.trim() || 'Guest',
+      customerPhone: customerPhone.trim(),
+      tableOrAddress: tableOrAddress.trim(),
+      specialInstructions: specialInstructions.trim(),
+      dateStr: new Date().toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }),
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
 
     onClearCart();
     window.open(`https://wa.me/${cafePhone}?text=${encoded}`, '_blank');
-  };
-
-  const handleInAppConfirmOrder = () => {
-    if (cartItems.length === 0) return;
-    const orderId = `FFC-${Math.floor(100000 + Math.random() * 900000)}`;
-    setOrderPlaced({
-      orderId,
-      items: [...cartItems],
-      total: grandTotal,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    });
-    onClearCart();
   };
 
   return (
@@ -241,6 +300,14 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
               </div>
 
               <div className="mt-6 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={handleOpenPlacedOrderBill}
+                  className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Print / Save Tax Invoice (PDF)</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -366,44 +433,35 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                 </div>
               </div>
 
-              {/* Order Mode (Dine-in / Takeaway / Delivery) */}
+              {/* Order Mode (Dine-in / Takeaway) */}
               <div className="bg-white dark:bg-stone-900 rounded-2xl p-3 sm:p-4 border border-stone-200 dark:border-stone-800 shadow-2xs">
                 <label className="block text-xs font-bold text-stone-800 dark:text-stone-200 mb-2">
                   Order Preference
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
                     onClick={() => setOrderType('dine-in')}
-                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border ${
+                    className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border flex items-center justify-center gap-1.5 ${
                       orderType === 'dine-in'
                         ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
                         : 'bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700'
                     }`}
                   >
-                    🍽️ Dine-In
+                    <span>🍽️</span>
+                    <span>Dine-In</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setOrderType('takeaway')}
-                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border ${
+                    className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border flex items-center justify-center gap-1.5 ${
                       orderType === 'takeaway'
                         ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
                         : 'bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700'
                     }`}
                   >
-                    🛍️ Takeaway
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOrderType('delivery')}
-                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border ${
-                      orderType === 'delivery'
-                        ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
-                        : 'bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700'
-                    }`}
-                  >
-                    🛵 Delivery
+                    <span>🛍️</span>
+                    <span>Takeaway</span>
                   </button>
                 </div>
               </div>
@@ -453,7 +511,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                   placeholder={
                     orderType === 'dine-in'
                       ? 'Table Number (e.g. Table 4)'
-                      : 'Delivery Address / Pickup Instructions'
+                      : 'Pickup Note / Time (Optional)'
                   }
                   value={tableOrAddress}
                   onChange={(e) => setTableOrAddress(e.target.value)}
@@ -471,10 +529,21 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
 
               {/* Bill Details Breakdown */}
               <div className="bg-white dark:bg-stone-900 rounded-2xl p-3 sm:p-4 border border-stone-200 dark:border-stone-800 shadow-2xs space-y-2">
-                <span className="text-xs font-black uppercase tracking-wider text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
-                  <Receipt className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-                  Bill Details
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                    <Receipt className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                    Bill Details
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleOpenCurrentBill}
+                    className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 flex items-center gap-1 hover:underline cursor-pointer bg-rose-50 dark:bg-rose-950/60 py-1 px-2.5 rounded-lg border border-rose-200 dark:border-rose-900/50"
+                    title="Generate & Print Professional PDF Bill with Cafe Name"
+                  >
+                    <Printer className="w-3 h-3" />
+                    <span>Print PDF Bill</span>
+                  </button>
+                </div>
 
                 <div className="text-xs text-stone-600 dark:text-stone-400 space-y-1.5 pt-1">
                   <div className="flex justify-between">
@@ -488,7 +557,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                   </div>
 
                   <div className="flex justify-between text-stone-500 dark:text-stone-400">
-                    <span>Delivery & Packaging</span>
+                    <span>Packaging & Charges</span>
                     <span className="text-emerald-600 dark:text-emerald-400 font-bold">FREE</span>
                   </div>
 
@@ -512,28 +581,26 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {/* WhatsApp Checkout Button */}
-              <button
-                type="button"
-                onClick={handlePlaceOrderViaWhatsApp}
-                className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
-                title="Send order directly to Cafe on WhatsApp"
-              >
-                <MessageCircle className="w-4 h-4 fill-white" />
-                <span>Order via WhatsApp 📲</span>
-              </button>
+            {/* Print PDF Bill Section / Button with Business Name */}
+            <button
+              type="button"
+              onClick={handleOpenCurrentBill}
+              className="w-full py-2.5 px-3 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-750 text-stone-800 dark:text-stone-200 font-bold text-xs border border-stone-200 dark:border-stone-700 shadow-2xs flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+            >
+              <Printer className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+              <span>Print / Download PDF Bill (Friends 4 Ever Cafe)</span>
+            </button>
 
-              {/* Confirm In-App Order Button */}
-              <button
-                type="button"
-                onClick={handleInAppConfirmOrder}
-                className="w-full py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
-              >
-                <span>Confirm Order</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
+            {/* WhatsApp Checkout Button (Single Direct Action) */}
+            <button
+              type="button"
+              onClick={handlePlaceOrderViaWhatsApp}
+              className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-md flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer"
+              title="Send order directly to Cafe on WhatsApp"
+            >
+              <MessageCircle className="w-4 h-4 fill-white" />
+              <span>Order via WhatsApp 📲</span>
+            </button>
 
             <p className="text-[10px] text-center text-stone-500 dark:text-stone-400 font-medium">
               WhatsApp Orders: <span className="font-bold text-emerald-600 dark:text-emerald-400">+91 97198 52037</span> • Friends 4 Ever Coffee Cafe, Chandpur
@@ -541,6 +608,15 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
           </div>
         )}
       </div>
+
+      {/* Professional Tax Invoice / PDF Bill Modal */}
+      {activeBillData && (
+        <ProfessionalBillModal
+          isOpen={isBillModalOpen}
+          onClose={() => setIsBillModalOpen(false)}
+          billData={activeBillData}
+        />
+      )}
     </div>
   );
 };

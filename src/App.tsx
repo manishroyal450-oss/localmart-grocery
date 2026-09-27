@@ -23,6 +23,7 @@ import {
 } from './services/cartService';
 import { UserProfile, getCurrentUser } from './services/authService';
 import { SearchX, ArrowUp, Sparkles, Play, Flame, Zap, CheckCircle2, MapPin } from 'lucide-react';
+import { LiquidButton } from '@/components/ui/liquid-glass-button';
 
 export const App: React.FC = () => {
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -361,61 +362,57 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* 4. Quick Filter Chips (Zomato-style Pill Filters) */}
+      {/* 4. Quick Filter Chips with Liquid Glass Buttons */}
       {!loading && !error && items.length > 0 && (
         <div className="max-w-7xl mx-auto w-full px-3.5 sm:px-6 mt-3 overflow-hidden">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 w-full min-w-0">
-            <button
-              type="button"
+          <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-2 px-1 w-full min-w-0">
+            <LiquidButton
+              variant="default"
+              size="pill"
+              isActive={activeFilter === 'all'}
               onClick={() => setActiveFilter('all')}
-              className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                activeFilter === 'all'
-                  ? 'bg-stone-900 dark:bg-white text-white dark:text-stone-900 shadow-xs'
-                  : 'bg-white dark:bg-stone-850 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-750 hover:bg-stone-100 dark:hover:bg-stone-800'
-              }`}
+              className="flex-shrink-0"
+              title="Show all items"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>All Items</span>
-            </button>
+            </LiquidButton>
 
-            <button
-              type="button"
+            <LiquidButton
+              variant="rose"
+              size="pill"
+              isActive={activeFilter === 'reels'}
               onClick={() => setActiveFilter('reels')}
-              className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                activeFilter === 'reels'
-                  ? 'bg-rose-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-stone-850 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-750 hover:bg-stone-100 dark:hover:bg-stone-800'
-              }`}
+              className="flex-shrink-0"
+              title="Filter items with video reels"
             >
-              <Play className="w-3.5 h-3.5 fill-current text-rose-500" />
+              <Play className={`w-3.5 h-3.5 fill-current ${activeFilter === 'reels' ? 'text-white' : 'text-rose-500'}`} />
               <span>With Videos</span>
-            </button>
+            </LiquidButton>
 
-            <button
-              type="button"
+            <LiquidButton
+              variant="amber"
+              size="pill"
+              isActive={activeFilter === 'popular'}
               onClick={() => setActiveFilter('popular')}
-              className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                activeFilter === 'popular'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-stone-850 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-750 hover:bg-stone-100 dark:hover:bg-stone-800'
-              }`}
+              className="flex-shrink-0"
+              title="Chef's top recommended popular dishes"
             >
-              <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <Flame className={`w-3.5 h-3.5 fill-current ${activeFilter === 'popular' ? 'text-white' : 'text-amber-500'}`} />
               <span>Chef's Choice</span>
-            </button>
+            </LiquidButton>
 
-            <button
-              type="button"
+            <LiquidButton
+              variant="emerald"
+              size="pill"
+              isActive={activeFilter === 'fast'}
               onClick={() => setActiveFilter('fast')}
-              className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                activeFilter === 'fast'
-                  ? 'bg-emerald-700 text-white shadow-xs'
-                  : 'bg-white dark:bg-stone-850 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-750 hover:bg-stone-100 dark:hover:bg-stone-800'
-              }`}
+              className="flex-shrink-0"
+              title="Fast preparation dishes"
             >
-              <Zap className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" />
+              <Zap className={`w-3.5 h-3.5 fill-current ${activeFilter === 'fast' ? 'text-white' : 'text-emerald-500'}`} />
               <span>Near & Fast</span>
-            </button>
+            </LiquidButton>
           </div>
         </div>
       )}
