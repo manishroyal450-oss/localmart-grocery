@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { MenuItem, CafeCartItem } from './types';
+import { MenuItem, CafeCartItem, DeliveryInfo } from './types';
 import { fetchMenuData, getCategoryIcon, sortCustomCategories } from './services/menuService';
 import { ZomatoHeader, GOOGLE_MAPS_URL, CAFE_FULL_ADDRESS } from './components/ZomatoHeader';
 import ZomatoBanner from './components/ZomatoBanner';
@@ -49,6 +49,16 @@ export const App: React.FC = () => {
   const [activeNavTab, setActiveNavTab] = useState<'home' | 'cart' | 'profile'>('home');
   const [cartToast, setCartToast] = useState<ToastPayload | null>(null);
 
+  // Delivery configuration from Google Sheet (Column R: deliveryvalue, Column S: deliverydescription)
+  const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo>({
+    deliveryValue: 50,
+    deliveryDescription: '',
+    freeDeliveryThreshold: 400,
+  });
+
+  // Table list from Google Sheet (Column T: Table)
+  const [tables, setTables] = useState<string[]>([]);
+
   // Filter & Search states
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -94,6 +104,12 @@ export const App: React.FC = () => {
       setItems(result.items);
       setLastSyncedTime(result.timestamp);
       setFromCache(result.fromCache);
+      if (result.deliveryInfo) {
+        setDeliveryInfo(result.deliveryInfo);
+      }
+      if (result.tables && result.tables.length > 0) {
+        setTables(result.tables);
+      }
     } catch (err: any) {
       console.error('Failed to load menu data:', err);
       setError(err?.message || 'Could not connect to Google Sheets. Please verify connection.');
@@ -765,6 +781,8 @@ export const App: React.FC = () => {
         onClearCart={handleClearCart}
         currentUser={currentUser}
         onOpenProfile={handleOpenProfile}
+        deliveryInfo={deliveryInfo}
+        tables={tables}
       />
 
       {/* ================= ADD TO CART NOTIFICATION TOAST ================= */}

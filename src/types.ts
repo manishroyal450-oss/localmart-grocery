@@ -29,6 +29,12 @@ export interface MenuItem {
 
 export type PricingType = 'standard' | 'half-full' | 'sizes' | 'custom';
 
+export interface DeliveryInfo {
+  deliveryValue: number;
+  deliveryDescription: string;
+  freeDeliveryThreshold: number | null;
+}
+
 export interface CategoryInfo {
   name: string;
   icon: string;

@@ -16,8 +16,10 @@ import {
   RotateCcw,
   Printer,
   FileSpreadsheet,
+  Truck,
+  ChevronDown,
 } from 'lucide-react';
-import { MenuItem, CafeCartItem } from '../types';
+import { MenuItem, CafeCartItem, DeliveryInfo } from '../types';
 import { getItemImageUrl } from '../services/menuService';
 import { calculateCartSummary } from '../services/cartService';
 import { UserProfile } from '../services/authService';
@@ -33,6 +35,8 @@ interface CafeCartDrawerProps {
   onClearCart: () => void;
   currentUser?: UserProfile | null;
   onOpenProfile?: () => void;
+  deliveryInfo?: DeliveryInfo;
+  tables?: string[];
 }
 
 export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
@@ -44,16 +48,50 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
   onClearCart,
   currentUser,
   onOpenProfile,
+  deliveryInfo,
+  tables,
 }) => {
-  const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>('dine-in');
+  const [orderType, setOrderType] = useState<'delivery' | 'dine-in' | 'takeaway'>('delivery');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [tableOrAddress, setTableOrAddress] = useState('');
+  const [selectedTable, setSelectedTable] = useState<string>('Table 1');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [orderPlaced, setOrderPlaced] = useState<any | null>(null);
   const [isBillModalOpen, setIsBillModalOpen] = useState<boolean>(false);
   const [activeBillData, setActiveBillData] = useState<BillData | null>(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState<boolean>(false);
+
+  // Available tables list from Google Sheet (Column T)
+  const availableTables =
+    tables && tables.length > 0
+      ? tables
+      : [
+          'Table 1',
+          'Table 2',
+          'Table 3',
+          'Table 4',
+          'Table 5',
+          'Table 6',
+          'Table 7',
+          'Table 8',
+          'Table 9',
+          'Table 10',
+        ];
+
+  // Set default table when switching to dine-in
+  useEffect(() => {
+    if (orderType === 'dine-in') {
+      const current = selectedTable || availableTables[0] || 'Table 1';
+      setSelectedTable(current);
+      setTableOrAddress(current);
+    }
+  }, [orderType]);
+
+  // Delivery configuration from Google Sheet (Column R & S)
+  const deliveryValue = deliveryInfo?.deliveryValue ?? 50;
+  const deliveryDescription = deliveryInfo?.deliveryDescription || '';
+  const freeThreshold = deliveryInfo?.freeDeliveryThreshold ?? 400;
 
   // Pre-fill user data when currentUser changes or drawer opens
   useEffect(() => {
@@ -79,8 +117,18 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
 
   if (!isOpen) return null;
 
-  const { totalItems, subtotal, deliveryCharge, packagingCharge, grandTotal } =
-    calculateCartSummary(cartItems);
+  // Calculate items subtotal
+  const { totalItems, subtotal } = calculateCartSummary(cartItems, 0);
+
+  // Free delivery criteria
+  const isFreeDelivery =
+    freeThreshold !== null && freeThreshold > 0 && subtotal >= freeThreshold;
+
+  // Active delivery fee based on order type
+  const activeDeliveryCharge =
+    orderType === 'delivery' ? (isFreeDelivery ? 0 : deliveryValue) : 0;
+  const packagingCharge = 0;
+  const grandTotal = subtotal + activeDeliveryCharge + packagingCharge;
 
   // Open professional PDF bill preview for current cart items
   const handleOpenCurrentBill = () => {
@@ -100,6 +148,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
         price: ci.price,
       })),
       subtotal,
+      deliveryCharge: activeDeliveryCharge,
       packagingCharge: 0,
       grandTotal,
       dateStr: new Date().toLocaleDateString('en-IN', {
@@ -133,6 +182,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
         price: ci.price,
       })),
       subtotal: orderPlaced.subtotal || orderPlaced.total,
+      deliveryCharge: orderPlaced.deliveryCharge || 0,
       packagingCharge: 0,
       grandTotal: orderPlaced.total,
       dateStr: orderPlaced.dateStr,
@@ -154,7 +204,9 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
       .join('\n');
 
     const typeLabel =
-      orderType === 'dine-in'
+      orderType === 'delivery'
+        ? '🚀 Home Delivery'
+        : orderType === 'dine-in'
         ? '🍽️ Dine-In / Table Order'
         : '🛍️ Takeaway / Pickup';
 
@@ -168,7 +220,9 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
       `👤 *Customer Name:* ${customerName || 'Guest'}\n` +
       `📞 *Phone:* ${customerPhone || 'Not provided'}\n` +
       (tableOrAddress
-        ? orderType === 'dine-in'
+        ? orderType === 'delivery'
+          ? `📍 *Delivery Address:* ${tableOrAddress}\n`
+          : orderType === 'dine-in'
           ? `🪑 *Table No / Seat:* ${tableOrAddress}\n`
           : `🛍️ *Pickup Note:* ${tableOrAddress}\n`
         : '') +
@@ -176,7 +230,11 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
       `--------------------------------------\n` +
       `📋 *Order Items:*\n${itemsSummary}\n` +
       `--------------------------------------\n` +
-      `💰 *Total Amount:* ₹${grandTotal}\n` +
+      `💵 *Items Subtotal:* ₹${subtotal}\n` +
+      (orderType === 'delivery'
+        ? `🚚 *Delivery Charges:* ${isFreeDelivery ? 'FREE (₹0)' : `₹${deliveryValue}`}\n`
+        : '') +
+      `💰 *Grand Total:* ₹${grandTotal}\n` +
       `--------------------------------------\n` +
       `Please confirm my order. Thank you! 🙏`;
 
@@ -192,6 +250,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
       order_type: orderType,
       grandtotal: grandTotal,
       subtotal,
+      delivery_fee: activeDeliveryCharge,
       notes: specialInstructions.trim(),
       items: cartItems.map((ci) => ({
         name: ci.item.name,
@@ -218,6 +277,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
       orderId,
       items: [...cartItems],
       subtotal,
+      deliveryCharge: activeDeliveryCharge,
       total: grandTotal,
       orderType,
       customerName: customerName.trim() || 'Guest',
@@ -229,10 +289,13 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
         month: 'short',
         year: 'numeric',
       }),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      time: new Date().toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      }),
     });
 
-    onClearCart();
     setIsPlacingOrder(false);
     window.open(`https://wa.me/${cafePhone}?text=${encoded}`, '_blank');
   };
@@ -479,16 +542,28 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                 </div>
               </div>
 
-              {/* Order Mode (Dine-in / Takeaway) */}
+              {/* Order Mode (Delivery / Dine-in / Takeaway) */}
               <div className="bg-white dark:bg-stone-900 rounded-2xl p-3 sm:p-4 border border-stone-200 dark:border-stone-800 shadow-2xs">
                 <label className="block text-xs font-bold text-stone-800 dark:text-stone-200 mb-2">
                   Order Preference
                 </label>
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOrderType('delivery')}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border flex flex-col items-center justify-center gap-1 ${
+                      orderType === 'delivery'
+                        ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                        : 'bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700'
+                    }`}
+                  >
+                    <span>🚀</span>
+                    <span>Delivery</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => setOrderType('dine-in')}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border flex flex-col items-center justify-center gap-1 ${
                       orderType === 'dine-in'
                         ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
                         : 'bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700'
@@ -500,7 +575,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                   <button
                     type="button"
                     onClick={() => setOrderType('takeaway')}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border flex flex-col items-center justify-center gap-1 ${
                       orderType === 'takeaway'
                         ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
                         : 'bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700'
@@ -552,17 +627,82 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                   />
                 </div>
 
-                <input
-                  type="text"
-                  placeholder={
-                    orderType === 'dine-in'
-                      ? 'Table Number (e.g. Table 4)'
-                      : 'Pickup Note / Time (Optional)'
-                  }
-                  value={tableOrAddress}
-                  onChange={(e) => setTableOrAddress(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
-                />
+                {/* Dine-In Table Box (Column T) vs Delivery Address vs Pickup Note */}
+                {orderType === 'dine-in' ? (
+                  <div className="p-3 rounded-xl bg-gradient-to-r from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/40 border border-rose-200/90 dark:border-rose-900/60 shadow-2xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                        <UtensilsCrossed className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                        <span>Select Dine-In Table</span>
+                      </label>
+                      <span className="text-[10px] font-extrabold text-rose-700 dark:text-rose-300 bg-rose-100/90 dark:bg-rose-900/60 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-800">
+                        {availableTables.length} Tables
+                      </span>
+                    </div>
+
+                    {/* Table Select Dropdown Box */}
+                    <div className="relative">
+                      <select
+                        value={selectedTable || tableOrAddress}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedTable(val);
+                          setTableOrAddress(val);
+                        }}
+                        className="w-full text-xs font-black px-3.5 py-2.5 rounded-xl border border-rose-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500 cursor-pointer appearance-none shadow-xs"
+                      >
+                        {availableTables.map((tbl) => (
+                          <option key={tbl} value={tbl}>
+                            🪑 {tbl}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-stone-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+
+                    {/* One-Tap Table Selection Pills */}
+                    <div className="pt-1">
+                      <p className="text-[10px] font-semibold text-stone-500 dark:text-stone-400 mb-1.5">
+                        Or tap your table directly:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-0.5">
+                        {availableTables.map((tbl) => {
+                          const isSelected = (selectedTable || tableOrAddress) === tbl;
+                          return (
+                            <button
+                              key={tbl}
+                              type="button"
+                              onClick={() => {
+                                setSelectedTable(tbl);
+                                setTableOrAddress(tbl);
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer border flex items-center gap-1 ${
+                                isSelected
+                                  ? 'bg-rose-600 text-white border-rose-600 shadow-xs scale-105'
+                                  : 'bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-rose-50 dark:hover:bg-stone-700 border-stone-200 dark:border-stone-700'
+                              }`}
+                            >
+                              <span>🪑</span>
+                              <span>{tbl}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder={
+                      orderType === 'delivery'
+                        ? 'Delivery Address / Landmark (e.g. V39R+XVW, Chandpur)'
+                        : 'Pickup Note / Expected Time'
+                    }
+                    value={tableOrAddress}
+                    onChange={(e) => setTableOrAddress(e.target.value)}
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
+                  />
+                )}
 
                 <input
                   type="text"
@@ -591,25 +731,73 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                   </button>
                 </div>
 
-                <div className="text-xs text-stone-600 dark:text-stone-400 space-y-1.5 pt-1">
+                <div className="text-xs text-stone-600 dark:text-stone-400 space-y-2 pt-1">
                   <div className="flex justify-between">
                     <span>Items Subtotal ({totalItems} items)</span>
-                    <span className="font-semibold text-stone-900 dark:text-stone-100">₹{subtotal}</span>
+                    <span className="font-semibold text-stone-900 dark:text-stone-100 font-mono">₹{subtotal}</span>
                   </div>
+
+                  {/* Delivery Charges Line (Column R) */}
+                  <div className="flex justify-between items-center text-stone-600 dark:text-stone-300">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <Truck className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                      Delivery Charges
+                    </span>
+                    {orderType === 'delivery' ? (
+                      isFreeDelivery ? (
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 font-mono">
+                          <span className="line-through text-stone-400 font-normal">₹{deliveryValue}</span>
+                          <span>FREE</span>
+                        </span>
+                      ) : (
+                        <span className="font-bold text-stone-900 dark:text-stone-100 font-mono">
+                          ₹{deliveryValue}
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold font-mono">
+                        ₹0 ({orderType === 'dine-in' ? 'Dine-In' : 'Takeaway'})
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Column S: Delivery Description in paragraph form right below delivery value */}
+                  {deliveryDescription && (
+                    <div className="p-2.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 border border-amber-200/90 dark:border-amber-800/60 text-xs text-amber-950 dark:text-amber-200 shadow-2xs space-y-1">
+                      <p className="font-medium text-[11px] leading-relaxed">
+                        {deliveryDescription}
+                      </p>
+                      {orderType === 'delivery' && (
+                        <div className="pt-1 border-t border-amber-200/60 dark:border-amber-800/40 flex items-center justify-between text-[10px] font-bold">
+                          {isFreeDelivery ? (
+                            <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                              <span>🎉</span>
+                              <span>FREE Delivery Unlocked!</span>
+                            </span>
+                          ) : freeThreshold ? (
+                            <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                              <span>💡</span>
+                              <span>Add ₹{freeThreshold - subtotal} more items for FREE Delivery!</span>
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex justify-between text-stone-500 dark:text-stone-400">
                     <span>Taxes & Restaurant GST</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">₹0 (Included)</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold font-mono">₹0 (Included)</span>
                   </div>
 
                   <div className="flex justify-between text-stone-500 dark:text-stone-400">
                     <span>Packaging & Charges</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">FREE</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold font-mono">FREE</span>
                   </div>
 
                   <div className="border-t border-stone-200 dark:border-stone-800 pt-2 flex justify-between items-center text-sm font-black text-stone-900 dark:text-white">
                     <span>To Pay</span>
-                    <span className="text-base text-rose-600 dark:text-rose-400">₹{grandTotal}</span>
+                    <span className="text-base text-rose-600 dark:text-rose-400 font-mono">₹{grandTotal}</span>
                   </div>
                 </div>
               </div>

@@ -10,7 +10,7 @@ export interface BillItem {
 
 export interface BillData {
   orderId: string;
-  orderType: 'dine-in' | 'takeaway';
+  orderType: 'dine-in' | 'takeaway' | 'delivery' | string;
   customerName: string;
   customerPhone: string;
   tableOrAddress?: string;
@@ -341,6 +341,12 @@ export const ProfessionalBillModal: React.FC<ProfessionalBillModalProps> = ({
                 <td style="text-align: right; color: #047857; font-weight: bold;">₹0 (Included)</td>
               </tr>
               <tr>
+                <td style="color: #4b5563;">Delivery Charges:</td>
+                <td style="text-align: right; color: ${billData.deliveryCharge && billData.deliveryCharge > 0 ? '#111827' : '#047857'}; font-weight: bold;">
+                  ${billData.deliveryCharge && billData.deliveryCharge > 0 ? '₹' + billData.deliveryCharge : 'FREE'}
+                </td>
+              </tr>
+              <tr>
                 <td style="color: #4b5563;">Packaging / Service:</td>
                 <td style="text-align: right; color: #047857; font-weight: bold;">FREE</td>
               </tr>
@@ -551,6 +557,12 @@ export const ProfessionalBillModal: React.FC<ProfessionalBillModalProps> = ({
               <div className="flex justify-between text-stone-600">
                 <span>GST & Restaurant Taxes:</span>
                 <span className="text-emerald-700 font-bold font-mono">₹0 (Included in MRP)</span>
+              </div>
+              <div className="flex justify-between text-stone-600">
+                <span>Delivery Charges:</span>
+                <span className={`font-bold font-mono ${billData.deliveryCharge && billData.deliveryCharge > 0 ? 'text-stone-900' : 'text-emerald-700'}`}>
+                  {billData.deliveryCharge && billData.deliveryCharge > 0 ? `₹${billData.deliveryCharge}` : 'FREE'}
+                </span>
               </div>
               <div className="flex justify-between text-stone-600">
                 <span>Packaging & Dine-in Service:</span>

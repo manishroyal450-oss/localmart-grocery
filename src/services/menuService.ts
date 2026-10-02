@@ -1,4 +1,4 @@
-import { MenuItem } from '../types';
+import { MenuItem, DeliveryInfo } from '../types';
 import rasgullaImage from '../assets/images/rasgulla_sweet_1789648884402.jpg';
 import spriteImage from '../assets/images/sprite_cold_drink_1789649786782.jpg';
 
@@ -6,6 +6,118 @@ export const GOOGLE_SHEET_ENDPOINT = 'https://docs.google.com/spreadsheets/d/1qV
 export const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHl-grnqg64pbYukq0WnDK73opMdgZ8n1WP7bxcdx7xO0NXJBw7jJPSX_aEnQtfFGLqA/exec';
 export const CACHE_STORAGE_KEY = 'cafe_menu_cached_data_v1';
 export const CACHE_TIME_KEY = 'cafe_menu_last_synced_v1';
+export const DELIVERY_CACHE_KEY = 'cafe_delivery_info_v1';
+export const TABLES_CACHE_KEY = 'cafe_tables_v1';
+
+export function parseTablesFromGviz(rawText: string): string[] {
+  const tables: string[] = [];
+  try {
+    const startIdx = rawText.indexOf('{');
+    const endIdx = rawText.lastIndexOf('}');
+    if (startIdx !== -1 && endIdx !== -1) {
+      const jsonString = rawText.substring(startIdx, endIdx + 1);
+      const data = JSON.parse(jsonString);
+
+      if (data?.table?.rows) {
+        for (const row of data.table.rows) {
+          if (!row.c) continue;
+          const cellT = row.c[19]; // Col T is index 19 (A=0, ..., T=19)
+          const valT = cellT
+            ? cellT.f !== undefined && cellT.f !== null
+              ? String(cellT.f)
+              : cellT.v !== undefined && cellT.v !== null
+              ? String(cellT.v)
+              : ''
+            : '';
+          const trimmed = valT.trim();
+          if (
+            trimmed.length > 0 &&
+            trimmed.toLowerCase() !== 'table' &&
+            !tables.includes(trimmed)
+          ) {
+            tables.push(trimmed);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error parsing table list from sheet Column T:', err);
+  }
+
+  if (tables.length === 0) {
+    return [
+      'Table 1',
+      'Table 2',
+      'Table 3',
+      'Table 4',
+      'Table 5',
+      'Table 6',
+      'Table 7',
+      'Table 8',
+      'Table 9',
+      'Table 10',
+    ];
+  }
+
+  return tables;
+}
+
+export function parseFreeDeliveryThreshold(desc: string): number | null {
+  if (!desc) return null;
+  // Match patterns like "400 rupay", "500 ka item", "₹400", "orders above 400", "400+"
+  const match = desc.match(
+    /(?:above|over|more than|orders of|item|rupay|rs|₹)?\s*(\d{2,5})\s*(?:rupay|rs|₹|rupees|ka item|ka|ke|\+)?/i
+  );
+  if (match && match[1]) {
+    const val = parseInt(match[1], 10);
+    if (!isNaN(val) && val >= 50) return val;
+  }
+  return null;
+}
+
+export function parseDeliveryInfo(rawText: string): DeliveryInfo {
+  let deliveryValue = 40;
+  let deliveryDescription = '';
+
+  try {
+    const startIdx = rawText.indexOf('{');
+    const endIdx = rawText.lastIndexOf('}');
+    if (startIdx !== -1 && endIdx !== -1) {
+      const jsonString = rawText.substring(startIdx, endIdx + 1);
+      const data = JSON.parse(jsonString);
+
+      if (data?.table?.rows) {
+        for (const row of data.table.rows) {
+          if (!row.c) continue;
+          const cellR = row.c[17]; // Col R: deliveryvalue
+          const cellS = row.c[18]; // Col S: deliverydescription
+
+          const valR = cellR ? (cellR.f !== undefined && cellR.f !== null ? String(cellR.f) : cellR.v !== undefined && cellR.v !== null ? String(cellR.v) : '') : '';
+          const valS = cellS ? (cellS.f !== undefined && cellS.f !== null ? String(cellS.f) : cellS.v !== undefined && cellS.v !== null ? String(cellS.v) : '') : '';
+
+          if (valR && !isNaN(Number(valR.replace(/[^\d.]/g, '')))) {
+            const num = Number(valR.replace(/[^\d.]/g, ''));
+            if (num > 0) deliveryValue = num;
+          }
+          if (valS && valS.trim().length > 0) {
+            deliveryDescription = valS.trim();
+          }
+          if (deliveryDescription && deliveryValue) break;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error parsing delivery info from sheet:', err);
+  }
+
+  const freeDeliveryThreshold = parseFreeDeliveryThreshold(deliveryDescription) || 400;
+
+  return {
+    deliveryValue,
+    deliveryDescription,
+    freeDeliveryThreshold,
+  };
+}
 
 export function parseGvizData(rawText: string): MenuItem[] {
   const startIdx = rawText.indexOf('{');
@@ -107,7 +219,13 @@ export function parseGvizData(rawText: string): MenuItem[] {
   return items;
 }
 
-export async function fetchMenuData(): Promise<{ items: MenuItem[]; timestamp: string; fromCache: boolean }> {
+export async function fetchMenuData(): Promise<{
+  items: MenuItem[];
+  timestamp: string;
+  fromCache: boolean;
+  deliveryInfo: DeliveryInfo;
+  tables: string[];
+}> {
   let rawText = '';
   let fromCache = false;
 
@@ -136,26 +254,71 @@ export async function fetchMenuData(): Promise<{ items: MenuItem[]; timestamp: s
       throw new Error('Google Sheet returned 0 menu items.');
     }
 
+    const deliveryInfo = parseDeliveryInfo(rawText);
+    const tables = parseTablesFromGviz(rawText);
+
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     // Cache the good data
     try {
       localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(items));
       localStorage.setItem(CACHE_TIME_KEY, timestamp);
+      localStorage.setItem(DELIVERY_CACHE_KEY, JSON.stringify(deliveryInfo));
+      localStorage.setItem(TABLES_CACHE_KEY, JSON.stringify(tables));
     } catch {
       // localStorage may be unavailable in some iframe configurations
     }
 
-    return { items, timestamp, fromCache: false };
+    return { items, timestamp, fromCache: false, deliveryInfo, tables };
   } catch (error) {
     // 3. Fallback: Check localStorage cache
     try {
       const cached = localStorage.getItem(CACHE_STORAGE_KEY);
       const cachedTime = localStorage.getItem(CACHE_TIME_KEY) || 'Previously cached';
+      let cachedDelivery: DeliveryInfo = {
+        deliveryValue: 50,
+        deliveryDescription: '',
+        freeDeliveryThreshold: 400,
+      };
+      try {
+        const dRaw = localStorage.getItem(DELIVERY_CACHE_KEY);
+        if (dRaw) cachedDelivery = JSON.parse(dRaw);
+      } catch {
+        // ignore
+      }
+
+      let cachedTables: string[] = [];
+      try {
+        const tRaw = localStorage.getItem(TABLES_CACHE_KEY);
+        if (tRaw) cachedTables = JSON.parse(tRaw);
+      } catch {
+        // ignore
+      }
+      if (cachedTables.length === 0) {
+        cachedTables = [
+          'Table 1',
+          'Table 2',
+          'Table 3',
+          'Table 4',
+          'Table 5',
+          'Table 6',
+          'Table 7',
+          'Table 8',
+          'Table 9',
+          'Table 10',
+        ];
+      }
+
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return { items: parsed, timestamp: cachedTime, fromCache: true };
+          return {
+            items: parsed,
+            timestamp: cachedTime,
+            fromCache: true,
+            deliveryInfo: cachedDelivery,
+            tables: cachedTables,
+          };
         }
       }
     } catch {

@@ -95,10 +95,13 @@ export function saveCartToStorage(cartItems: CafeCartItem[]): void {
 /**
  * Calculate totals for cart
  */
-export function calculateCartSummary(cartItems: CafeCartItem[]) {
+export function calculateCartSummary(
+  cartItems: CafeCartItem[],
+  customDeliveryCharge: number = 0
+) {
   const totalItems = cartItems.reduce((acc, curr) => acc + curr.quantity, 0);
   const subtotal = cartItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
-  const deliveryCharge = 0; // Free delivery for cafe
+  const deliveryCharge = customDeliveryCharge;
   const packagingCharge = 0; // Free packaging
   const grandTotal = subtotal + deliveryCharge + packagingCharge;
 
