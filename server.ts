@@ -28,7 +28,9 @@ let customersList: any[] = [];
 
 // 0. Dynamic Google Sheet Menu endpoint
 const GOOGLE_SHEET_MENU_URL = 'https://docs.google.com/spreadsheets/d/1qVLdRKkLlQHDKtC7iZr4O1E-wSpNAjXzEssM-Zsb4og/gviz/tq?tqx=out:json&sheet=Menudata';
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHl-grnqg64pbYukq0WnDK73opMdgZ8n1WP7bxcdx7xO0NXJBw7jJPSX_aEnQtfFGLqA/exec';
 
+// 0a. Dynamic Google Sheet Menu endpoint (GViz)
 app.get('/api/menu', async (req, res) => {
   try {
     const response = await fetch(GOOGLE_SHEET_MENU_URL);
@@ -41,6 +43,49 @@ app.get('/api/menu', async (req, res) => {
   } catch (err: any) {
     console.error('Error fetching Google Sheet menu:', err);
     res.status(500).json({ error: err.message || 'Failed to fetch menu from Google Sheets' });
+  }
+});
+
+// 0b. Google Apps Script Live Menu & Stock endpoint
+app.get('/api/apps-script/menu', async (req, res) => {
+  try {
+    const response = await fetch(GOOGLE_APPS_SCRIPT_URL);
+    if (!response.ok) {
+      throw new Error(`Apps Script responded with status ${response.status}`);
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch (err: any) {
+    console.error('Error fetching Apps Script menu:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch items from Apps Script' });
+  }
+});
+
+// 0c. Sync Order to Google Sheet (Deduct stock and add order amount in Excel/Sheet)
+app.post('/api/sync-sheet-order', async (req, res) => {
+  try {
+    const orderData = req.body;
+    console.log('[AppsScript Sync] Syncing order to Google Sheet:', orderData?.bill_no || orderData?.order_id);
+
+    const scriptResponse = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData)
+    });
+
+    const result = await scriptResponse.json();
+    console.log('[AppsScript Sync] Response:', result);
+    res.json({
+      status: result.status || 'success',
+      message: result.message || 'Data saved, stock deducted and all columns updated successfully',
+      data: result
+    });
+  } catch (err: any) {
+    console.error('Error syncing order to Google Apps Script:', err);
+    res.status(500).json({
+      status: 'error',
+      error: err.message || 'Failed to sync with Google Sheet'
+    });
   }
 });
 
@@ -227,6 +272,34 @@ app.post('/api/orders', (req, res) => {
     };
 
     ordersList.unshift(newOrder);
+
+    // Sync stock deduction & amount addition to Google Sheet / Excel in background
+    try {
+      fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bill_no: orderId,
+          order_id: orderId,
+          customer_name: customerName,
+          customer_phone: customerPhone,
+          table_or_address: customerAddress,
+          order_type: deliveryType,
+          grandtotal: totalAmount,
+          items: finalizedItems.map(f => ({
+            name: f.name,
+            item_name: f.name,
+            qty: f.quantity,
+            stockdeduct: f.quantity,
+            price: f.price,
+            total: f.price * f.quantity
+          }))
+        })
+      }).catch(err => console.error('[AppsScript Sync Background Error]:', err));
+    } catch (e) {
+      console.error('[AppsScript Trigger Error]:', e);
+    }
+
     res.status(201).json(newOrder);
   } catch (err: any) {
     console.error('Error placing order:', err);

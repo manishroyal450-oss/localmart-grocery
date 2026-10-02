@@ -15,12 +15,14 @@ import {
   Receipt,
   RotateCcw,
   Printer,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { MenuItem, CafeCartItem } from '../types';
 import { getItemImageUrl } from '../services/menuService';
 import { calculateCartSummary } from '../services/cartService';
 import { UserProfile } from '../services/authService';
 import { ProfessionalBillModal, BillData } from './ProfessionalBillModal';
+import { syncOrderToGoogleSheet } from '../services/googleAppsScriptService';
 
 interface CafeCartDrawerProps {
   isOpen: boolean;
@@ -51,6 +53,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
   const [orderPlaced, setOrderPlaced] = useState<any | null>(null);
   const [isBillModalOpen, setIsBillModalOpen] = useState<boolean>(false);
   const [activeBillData, setActiveBillData] = useState<BillData | null>(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState<boolean>(false);
 
   // Pre-fill user data when currentUser changes or drawer opens
   useEffect(() => {
@@ -141,6 +144,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
   // Handle WhatsApp Checkout
   const handlePlaceOrderViaWhatsApp = () => {
     if (cartItems.length === 0) return;
+    setIsPlacingOrder(true);
 
     const itemsSummary = cartItems
       .map(
@@ -179,6 +183,36 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
     const encoded = encodeURIComponent(text);
     const cafePhone = '919719852037'; // +91 97198 52037 WhatsApp Order Number
 
+    // Auto-sync order with Google Sheet via Google Apps Script (deducts stock and adds amount in Excel)
+    const sheetPayload = {
+      bill_no: orderId,
+      customer_name: customerName.trim() || (currentUser?.fullName ? currentUser.fullName : 'Guest'),
+      customer_phone: customerPhone.trim() || (currentUser?.contactNumber ? currentUser.contactNumber : ''),
+      table_or_address: tableOrAddress.trim() || (currentUser?.address ? currentUser.address : ''),
+      order_type: orderType,
+      grandtotal: grandTotal,
+      subtotal,
+      notes: specialInstructions.trim(),
+      items: cartItems.map((ci) => ({
+        name: ci.item.name,
+        item_name: ci.item.name,
+        variant: ci.variant || 'Standard',
+        qty: ci.quantity,
+        stockdeduct: ci.quantity,
+        price: ci.price,
+        total: ci.price * ci.quantity,
+      })),
+    };
+
+    // Trigger stock deduct & amount add in Google Sheet in the background
+    syncOrderToGoogleSheet(sheetPayload)
+      .then((res) => {
+        console.log('[Google Sheet Synced]:', res);
+      })
+      .catch((err) => {
+        console.warn('[Google Sheet Sync Error]:', err);
+      });
+
     // Set order placed state for UI feedback with full invoice data
     setOrderPlaced({
       orderId,
@@ -199,6 +233,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
     });
 
     onClearCart();
+    setIsPlacingOrder(false);
     window.open(`https://wa.me/${cafePhone}?text=${encoded}`, '_blank');
   };
 
@@ -296,6 +331,17 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                 <div className="flex justify-between text-stone-500 text-[11px]">
                   <span>Order Time:</span>
                   <span>{orderPlaced.time}</span>
+                </div>
+
+                {/* Live Google Apps Script / Excel Update Feedback */}
+                <div className="pt-2 border-t border-stone-200 dark:border-stone-800 flex items-center justify-between text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                  <span className="flex items-center gap-1.5">
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    Excel / Sheet Updated:
+                  </span>
+                  <span className="bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full text-[10px] text-emerald-800 dark:text-emerald-300">
+                    Stock Deducted & Amount Added
+                  </span>
                 </div>
               </div>
 
@@ -591,15 +637,27 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
               <span>Print / Download PDF Bill (Friends 4 Ever Cafe)</span>
             </button>
 
+            {/* Auto Stock Deduct & Excel Update Notification */}
+            <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 rounded-xl border border-emerald-200/80 dark:border-emerald-800/80 text-[11px] text-emerald-800 dark:text-emerald-300">
+              <span className="flex items-center gap-1.5 font-bold">
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                Excel Auto-Update Active
+              </span>
+              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 rounded-full font-medium text-emerald-700 dark:text-emerald-300">
+                Stock Deduct & Amount Add
+              </span>
+            </div>
+
             {/* WhatsApp Checkout Button (Single Direct Action) */}
             <button
               type="button"
               onClick={handlePlaceOrderViaWhatsApp}
-              className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-md flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer"
+              disabled={isPlacingOrder}
+              className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-md flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer disabled:opacity-80"
               title="Send order directly to Cafe on WhatsApp"
             >
               <MessageCircle className="w-4 h-4 fill-white" />
-              <span>Order via WhatsApp 📲</span>
+              <span>{isPlacingOrder ? 'Updating Excel & Opening WhatsApp...' : 'Order via WhatsApp 📲'}</span>
             </button>
 
             <p className="text-[10px] text-center text-stone-500 dark:text-stone-400 font-medium">

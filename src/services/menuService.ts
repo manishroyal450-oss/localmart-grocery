@@ -3,6 +3,7 @@ import rasgullaImage from '../assets/images/rasgulla_sweet_1789648884402.jpg';
 import spriteImage from '../assets/images/sprite_cold_drink_1789649786782.jpg';
 
 export const GOOGLE_SHEET_ENDPOINT = 'https://docs.google.com/spreadsheets/d/1qVLdRKkLlQHDKtC7iZr4O1E-wSpNAjXzEssM-Zsb4og/gviz/tq?tqx=out:json&sheet=Menudata';
+export const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHl-grnqg64pbYukq0WnDK73opMdgZ8n1WP7bxcdx7xO0NXJBw7jJPSX_aEnQtfFGLqA/exec';
 export const CACHE_STORAGE_KEY = 'cafe_menu_cached_data_v1';
 export const CACHE_TIME_KEY = 'cafe_menu_last_synced_v1';
 
@@ -51,12 +52,34 @@ export function parseGvizData(rawText: string): MenuItem[] {
     }
 
     const standardPrice = cleanPrice(getColValue(2));
-    const halfPrice = cleanPrice(getColValue(3));
-    const fullPrice = cleanPrice(getColValue(4));
-    const regularPrice = cleanPrice(getColValue(5));
-    const mediumPrice = cleanPrice(getColValue(6));
-    const largePrice = cleanPrice(getColValue(7));
+    const rawHalfPrice = cleanPrice(getColValue(3));
+    const rawFullPrice = cleanPrice(getColValue(4));
+    const rawRegularPrice = cleanPrice(getColValue(5));
+    const rawMediumPrice = cleanPrice(getColValue(6));
+    const rawLargePrice = cleanPrice(getColValue(7));
     const notes = getColValue(8);
+
+    // Sanitize prices: prevent dates like "01/10/2026" or accidentally overwritten values
+    const isDate = (val: string | null) => Boolean(val && (val.includes('/') || (val.includes('-') && val.length > 5)));
+    const isDrinks = category.toLowerCase().includes('drink') || category.toLowerCase().includes('beverage') || category.toLowerCase().includes('coffee');
+
+    const halfPrice = isDrinks ? null : rawHalfPrice;
+    const fullPrice = isDrinks ? null : rawFullPrice;
+    const regularPrice = (isDrinks || rawRegularPrice === '0') ? null : rawRegularPrice;
+    const mediumPrice = (isDate(rawMediumPrice) || isDrinks) ? null : rawMediumPrice;
+    const largePrice = isDrinks ? null : rawLargePrice;
+
+    // Column K index is 10 (A=0, B=1, ... K=10): Stockdeduct column in Excel / Google Sheet
+    const rawStockK = getColValue(10);
+    const parsedStockK = rawStockK !== null && !isNaN(Number(rawStockK)) ? Number(rawStockK) : undefined;
+
+    // Column M index is 12 (A=0, B=1, ... M=12): Offers column (Owner promotional offers/discounts e.g. "67%off")
+    const rawOffer = getColValue(12);
+    const offer =
+      rawOffer && rawOffer.trim().length > 0 && rawOffer.trim() !== '0'
+        ? rawOffer.trim()
+        : null;
+
     const videoUrl = getColValue(15);
     // Column Q index is 16 (A=0, B=1, ... Q=16)
     const rawImageUrl = getColValue(16);
@@ -66,6 +89,8 @@ export function parseGvizData(rawText: string): MenuItem[] {
       id: `menu-item-${index + 1}`,
       category,
       name: itemName,
+      stock: parsedStockK,
+      offer,
       standardPrice,
       halfPrice,
       fullPrice,
@@ -143,7 +168,7 @@ export async function fetchMenuData(): Promise<{ items: MenuItem[]; timestamp: s
 
 export const CATEGORY_ICONS: Record<string, string> = {
   'All': '✨',
-  'Drinks': '🥤',
+  'Pizza': '🍕',
   'Coffee': '☕',
   'Shakes': '🧋',
   'Lassi': '🥛',
@@ -153,8 +178,8 @@ export const CATEGORY_ICONS: Record<string, string> = {
   'Chat': '🥘',
   'Burger': '🍔',
   'Sandwich': '🥪',
-  'Pizza': '🍕',
   'Pasta': '🍝',
+  'Drinks': '🥤',
 };
 
 export function getCategoryIcon(category: string): string {
@@ -167,7 +192,7 @@ export function getCategoryIcon(category: string): string {
 }
 
 export const DEFAULT_CATEGORY_IMAGES: Record<string, string> = {
-  'Drinks': spriteImage,
+  'Pizza': 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=400&q=80',
   'Coffee': 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=400&q=80',
   'Shakes': 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=400&q=80',
   'Lassi': 'https://images.unsplash.com/photo-1546173159-315724a31696?auto=format&fit=crop&w=400&q=80',
@@ -177,8 +202,8 @@ export const DEFAULT_CATEGORY_IMAGES: Record<string, string> = {
   'Chat': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=400&q=80',
   'Burger': 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80',
   'Sandwich': 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=400&q=80',
-  'Pizza': 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=400&q=80',
   'Pasta': 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=400&q=80',
+  'Drinks': spriteImage,
 };
 
 export function getItemImageUrl(item: MenuItem): string {
@@ -190,7 +215,7 @@ export function getItemImageUrl(item: MenuItem): string {
 
 export const CATEGORY_THUMBNAILS: Record<string, string> = {
   'All': 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=240&q=80',
-  'Drinks': spriteImage,
+  'Pizza': 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=240&q=80',
   'Coffee': 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=240&q=80',
   'Shakes': 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=240&q=80',
   'Lassi': 'https://images.unsplash.com/photo-1546173159-315724a31696?auto=format&fit=crop&w=240&q=80',
@@ -200,11 +225,34 @@ export const CATEGORY_THUMBNAILS: Record<string, string> = {
   'Chat': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=240&q=80',
   'Burger': 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=240&q=80',
   'Sandwich': 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=240&q=80',
-  'Pizza': 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=240&q=80',
   'Pasta': 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=240&q=80',
+  'Drinks': spriteImage,
 };
 
 export function getCategoryThumbnail(category: string): string {
   return CATEGORY_THUMBNAILS[category] || DEFAULT_CATEGORY_IMAGES[category] || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=240&q=80';
+}
+
+/**
+ * Sorts category list so that Pizza is always at position #1,
+ * and Drink/Drinks is always at the very last position.
+ */
+export function sortCustomCategories(cats: string[]): string[] {
+  const pizzaList: string[] = [];
+  const drinksList: string[] = [];
+  const middleList: string[] = [];
+
+  cats.forEach((cat) => {
+    const lower = cat.toLowerCase().trim();
+    if (lower === 'pizza' || lower.includes('pizza')) {
+      pizzaList.push(cat);
+    } else if (lower === 'drinks' || lower === 'drink' || lower.includes('drink')) {
+      drinksList.push(cat);
+    } else {
+      middleList.push(cat);
+    }
+  });
+
+  return [...pizzaList, ...middleList, ...drinksList];
 }
 

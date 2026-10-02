@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShoppingCart, CheckCircle, X, ArrowRight } from 'lucide-react';
+import { ShoppingCart, CheckCircle, X, ArrowRight, MessageCircle } from 'lucide-react';
 import { MenuItem } from '../types';
 import { getItemImageUrl } from '../services/menuService';
 
@@ -17,9 +17,10 @@ interface CartToastProps {
   toast: ToastPayload | null;
   onClose: () => void;
   onOpenCart: () => void;
+  onWhatsAppOrder?: () => void;
 }
 
-export const CartToast: React.FC<CartToastProps> = ({ toast, onClose, onOpenCart }) => {
+export const CartToast: React.FC<CartToastProps> = ({ toast, onClose, onOpenCart, onWhatsAppOrder }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -28,7 +29,7 @@ export const CartToast: React.FC<CartToastProps> = ({ toast, onClose, onOpenCart
       const timer = setTimeout(() => {
         setIsVisible(false);
         setTimeout(onClose, 300);
-      }, 3500);
+      }, 4500);
 
       return () => clearTimeout(timer);
     } else {
@@ -47,7 +48,7 @@ export const CartToast: React.FC<CartToastProps> = ({ toast, onClose, onOpenCart
         isVisible
           ? 'translate-y-0 opacity-100 scale-100'
           : '-translate-y-4 opacity-0 scale-95 pointer-events-none'
-      } top-4 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md`}
+      } top-4 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-lg`}
     >
       <div className="bg-stone-900/95 text-white backdrop-blur-md rounded-2xl p-3 sm:p-3.5 shadow-2xl border border-stone-800 flex items-center gap-3">
         {/* Thumbnail Image */}
@@ -80,23 +81,38 @@ export const CartToast: React.FC<CartToastProps> = ({ toast, onClose, onOpenCart
             <span className="font-bold text-amber-400">₹{toast.price}</span>
             <span className="text-stone-400 mx-1.5">|</span>
             <span className="text-stone-300">
-              Cart: {toast.totalCartItems} {toast.totalCartItems === 1 ? 'item' : 'items'} (₹{toast.cartTotalAmount})
+              Cart: {toast.totalCartItems} {toast.totalCartItems === 1 ? 'dish' : 'dishes'} (₹{toast.cartTotalAmount})
             </span>
           </p>
         </div>
 
-        {/* Action Button: View Cart */}
+        {/* Action Buttons: WhatsApp Order & View Cart */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
+          {onWhatsAppOrder && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onWhatsAppOrder();
+              }}
+              title="Quick Order on WhatsApp (Auto Stock Deduct)"
+              className="px-2.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+            >
+              <MessageCircle className="w-3.5 h-3.5 fill-white" />
+              <span className="hidden xs:inline">WhatsApp</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => {
               onClose();
               onOpenCart();
             }}
-            className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black shadow-md flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+            className="px-2.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black shadow-md flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
           >
-            <span>View Cart</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span>Cart</span>
+            <ArrowRight className="w-3 h-3" />
           </button>
 
           <button
@@ -105,7 +121,7 @@ export const CartToast: React.FC<CartToastProps> = ({ toast, onClose, onOpenCart
               setIsVisible(false);
               setTimeout(onClose, 250);
             }}
-            className="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 transition-colors cursor-pointer"
             aria-label="Close notification"
           >
             <X className="w-4 h-4" />

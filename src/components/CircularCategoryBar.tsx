@@ -1,6 +1,6 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getCategoryThumbnail } from '../services/menuService';
+import { getCategoryThumbnail, sortCustomCategories } from '../services/menuService';
 
 interface CircularCategoryBarProps {
   categories: string[];
@@ -27,7 +27,14 @@ export const CircularCategoryBar: React.FC<CircularCategoryBarProps> = ({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  const allCategories = ['All', ...categories];
+  // Categories ordered with Pizza at #1 and Drinks at last
+  const sortedCategories = useMemo(() => {
+    return sortCustomCategories(categories);
+  }, [categories]);
+
+  const allCategories = useMemo(() => {
+    return ['All', ...sortedCategories];
+  }, [sortedCategories]);
 
   // Core 3D Cylinder transformation calculation for each item
   const updateCylinderTransforms = useCallback(() => {

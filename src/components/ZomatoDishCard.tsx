@@ -111,11 +111,20 @@ export const ZomatoDishCard: React.FC<ZomatoDishCardProps> = ({
 
         {/* Top Floating Controls */}
         <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
-          {/* Category Pill */}
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-stone-900 bg-white/95 backdrop-blur-xs px-2.5 py-0.5 rounded-full shadow-xs">
-            <span>{categoryIcon}</span>
-            <span>{item.category}</span>
-          </span>
+          {/* Category Pill & Offer Tag */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-stone-900 bg-white/95 backdrop-blur-xs px-2.5 py-0.5 rounded-full shadow-xs">
+              <span>{categoryIcon}</span>
+              <span>{item.category}</span>
+            </span>
+
+            {item.offer && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-black text-white bg-gradient-to-r from-rose-600 to-amber-600 px-2.5 py-0.5 rounded-full shadow-md uppercase tracking-wider animate-pulse border border-white/30">
+                <span>🔥</span>
+                <span>{item.offer}</span>
+              </span>
+            )}
+          </div>
 
           <div className="flex items-center gap-1.5 pointer-events-auto">
             {/* Video Link */}

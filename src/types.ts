@@ -14,6 +14,7 @@ export interface MenuItem {
   notes?: string | null;
   videoUrl?: string | null;
   imageUrl?: string | null;
+  offer?: string | null;
   isVeg?: boolean;
   unit?: string;
   image?: string;

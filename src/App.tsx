@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { MenuItem, CafeCartItem } from './types';
-import { fetchMenuData, getCategoryIcon } from './services/menuService';
+import { fetchMenuData, getCategoryIcon, sortCustomCategories } from './services/menuService';
 import { ZomatoHeader, GOOGLE_MAPS_URL, CAFE_FULL_ADDRESS } from './components/ZomatoHeader';
 import ZomatoBanner from './components/ZomatoBanner';
 import CircularCategoryBar from './components/CircularCategoryBar';
@@ -13,6 +13,7 @@ import ImagePreviewModal from './components/ImagePreviewModal';
 import ProfileModal from './components/ProfileModal';
 import CafeCartDrawer from './components/CafeCartDrawer';
 import CafeNavigationBar from './components/CafeNavigationBar';
+import CafeFooter from './components/CafeFooter';
 import CartToast, { ToastPayload } from './components/CartToast';
 import {
   loadCartFromStorage,
@@ -22,8 +23,13 @@ import {
   getCartItemId,
 } from './services/cartService';
 import { UserProfile, getCurrentUser } from './services/authService';
-import { SearchX, ArrowUp, Sparkles, Play, Flame, Zap, CheckCircle2, MapPin } from 'lucide-react';
+import { SearchX, ArrowUp, Sparkles, Play, Flame, Zap, CheckCircle2, MapPin, MessageCircle, FileSpreadsheet } from 'lucide-react';
 import { LiquidButton } from '@/components/ui/liquid-glass-button';
+import {
+  syncOrderToGoogleSheet,
+  buildWhatsAppOrderMessage,
+  CAFE_WHATSAPP_PHONE,
+} from './services/googleAppsScriptService';
 
 export const App: React.FC = () => {
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -114,41 +120,27 @@ export const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Distinct categories in the order they appear
+  // Distinct categories ordered with Pizza at #1 and Drinks at the very end
   const categories = useMemo(() => {
     const set = new Set<string>();
     items.forEach((item) => {
       if (item.category) set.add(item.category);
     });
-    return Array.from(set);
+    return sortCustomCategories(Array.from(set));
   }, [items]);
 
-  // Spotlight items for the Horizontal Scroll Row
+  // Spotlight items for the Horizontal Scroll Row: ONLY show items with offers OR YouTube/video links
   const spotlightItems = useMemo(() => {
     if (items.length === 0) return [];
-    const withVideos = items.filter((i) => i.videoUrl && i.videoUrl.trim().length > 0);
-    const signaturePicks = items.filter(
-      (i) =>
-        i.name.toLowerCase().includes('pizza') ||
-        i.name.toLowerCase().includes('burger') ||
-        i.name.toLowerCase().includes('shake') ||
-        i.name.toLowerCase().includes('mojito') ||
-        i.name.toLowerCase().includes('coffee')
-    );
-
-    const combined = [...withVideos, ...signaturePicks];
-    const uniqueIds = new Set<string | number>();
-    const result: MenuItem[] = [];
-
-    for (const item of combined) {
-      if (!uniqueIds.has(item.id)) {
-        uniqueIds.add(item.id);
-        result.push(item);
-      }
-      if (result.length >= 10) break;
-    }
-
-    return result.length > 0 ? result : items.slice(0, 8);
+    return items.filter((item) => {
+      const hasOffer = Boolean(
+        item.offer && item.offer.trim().length > 0 && item.offer.trim() !== '0'
+      );
+      const hasVideo = Boolean(
+        item.videoUrl && item.videoUrl.trim().length > 0
+      );
+      return hasOffer || hasVideo;
+    });
   }, [items]);
 
   // Filtered items based on Category, Search Query, and Quick Chips
@@ -287,6 +279,77 @@ export const App: React.FC = () => {
     },
     [cartItems]
   );
+
+  // Quick WhatsApp Order with Automatic Stock Deduct & Amount Add trigger
+  const [isQuickOrdering, setIsQuickOrdering] = useState<boolean>(false);
+  const [orderSyncSuccessMessage, setOrderSyncSuccessMessage] = useState<string | null>(null);
+
+  const handleQuickWhatsAppOrder = useCallback(async () => {
+    if (cartItems.length === 0) return;
+    setIsQuickOrdering(true);
+
+    const orderId = `FFC-${Math.floor(100000 + Math.random() * 900000)}`;
+    const custName = currentUser?.fullName?.trim() || 'Guest Customer';
+    const custPhone = currentUser?.contactNumber?.trim() || '';
+    const custAddress = currentUser?.address?.trim() || '';
+
+    // 1. Prepare Google Sheet stock deduction & amount addition payload
+    const sheetPayload = {
+      bill_no: orderId,
+      customer_name: custName,
+      customer_phone: custPhone,
+      table_or_address: custAddress,
+      order_type: 'dine-in',
+      grandtotal: cartTotalAmount,
+      subtotal: cartTotalAmount,
+      notes: 'Quick WhatsApp Checkout',
+      items: cartItems.map((ci) => ({
+        name: ci.item.name,
+        item_name: ci.item.name,
+        variant: ci.variant || 'Standard',
+        qty: ci.quantity,
+        stockdeduct: ci.quantity,
+        price: ci.price,
+        total: ci.price * ci.quantity,
+      })),
+    };
+
+    // 2. Trigger Stock Deduct & Amount Add in Google Sheet / Excel
+    syncOrderToGoogleSheet(sheetPayload)
+      .then((res) => {
+        console.log('[Quick WhatsApp Order Synced]:', res);
+      })
+      .catch((err) => {
+        console.warn('[Quick WhatsApp Order Sync Error]:', err);
+      });
+
+    // 3. Build WhatsApp message and open WhatsApp
+    const message = buildWhatsAppOrderMessage({
+      orderId,
+      orderType: 'dine-in',
+      customerName: custName,
+      customerPhone: custPhone,
+      tableOrAddress: custAddress,
+      items: cartItems.map((ci) => ({
+        name: ci.item.name,
+        variant: ci.variant,
+        quantity: ci.quantity,
+        price: ci.price,
+      })),
+      grandTotal: cartTotalAmount,
+    });
+
+    const encoded = encodeURIComponent(message);
+    window.open(`https://wa.me/${CAFE_WHATSAPP_PHONE}?text=${encoded}`, '_blank');
+
+    // 4. Clear cart & show notification
+    setCartItems([]);
+    setIsQuickOrdering(false);
+    setOrderSyncSuccessMessage(`Order #${orderId} sent to WhatsApp! Stock deducted & Excel updated.`);
+    setTimeout(() => {
+      setOrderSyncSuccessMessage(null);
+    }, 5000);
+  }, [cartItems, cartTotalAmount, currentUser]);
 
   // ================= NAVIGATION HANDLERS =================
   const handleGoHome = useCallback(() => {
@@ -432,10 +495,10 @@ export const App: React.FC = () => {
         )}
 
         {/* 5. SIDE SCROLL (HORIZONTAL SCROLL): RECOMMENDED FOR YOU */}
-        {!loading && !error && !searchQuery && selectedCategory === 'All' && activeFilter === 'all' && (
+        {!loading && !error && !searchQuery && selectedCategory === 'All' && activeFilter === 'all' && spotlightItems.length > 0 && (
           <HorizontalDishesRow
             title="Recommended For You"
-            subtitle="Side scroll to explore hand-crafted chef specialties & popular cafe favorites"
+            subtitle="Exclusive deals, offers & dishes with video reels"
             items={spotlightItems}
             onOpenVideo={handleOpenVideo}
             onPreviewImage={(url, name) => setPreviewModal({ isOpen: true, url, name })}
@@ -601,39 +664,11 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white dark:bg-stone-900 border-t border-stone-200 dark:border-stone-800 mt-12 py-8 text-center text-xs text-stone-500 dark:text-stone-400 transition-colors duration-200">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col items-center gap-2.5">
-          <div className="flex items-center gap-2 font-bold text-stone-800 dark:text-stone-200 text-sm">
-            <span>Friends 4 Ever Coffee Cafe</span>
-            <span>•</span>
-            <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              100% Pure Veg
-            </span>
-          </div>
-
-          {/* Clickable Address Link to Google Maps */}
-          <a
-            href={GOOGLE_MAPS_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={`View on Google Maps: ${CAFE_FULL_ADDRESS}`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-50 dark:bg-stone-850 hover:bg-stone-100 dark:hover:bg-stone-800 border border-stone-200 dark:border-stone-750 text-stone-700 dark:text-stone-300 hover:text-rose-600 dark:hover:text-rose-400 transition-colors text-xs font-medium max-w-xl text-center"
-          >
-            <MapPin className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 flex-shrink-0" />
-            <span className="truncate">{CAFE_FULL_ADDRESS}</span>
-            <span className="text-rose-600 dark:text-rose-400 font-bold ml-1">Open in Maps ↗</span>
-          </a>
-
-          <p className="text-stone-400 dark:text-stone-500 text-[11px]">
-            Live Digital Menu connected with Google Sheets • Real-time Updates
-          </p>
-          <p className="text-stone-400 dark:text-stone-500 text-[11px] mt-0.5">
-            © {new Date().getFullYear()} Friends 4 Ever Coffee Cafe. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      {/* Professional Cafe Footer with Google Map & Rich Details */}
+      <CafeFooter
+        onCategorySelect={(cat) => setSelectedCategory(cat)}
+        onOpenCart={handleOpenCart}
+      />
 
       {/* Floating Back to Top Button */}
       {showScrollTop && (
@@ -647,6 +682,66 @@ export const App: React.FC = () => {
         >
           <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
+      )}
+
+      {/* ================= ORDER SYNC SUCCESS NOTIFICATION ================= */}
+      {orderSyncSuccessMessage && (
+        <div className="fixed top-5 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="bg-emerald-600 text-white rounded-2xl p-3.5 shadow-2xl border border-emerald-400 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="w-5 h-5 text-white shrink-0" />
+              <p className="text-xs font-bold leading-tight">{orderSyncSuccessMessage}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOrderSyncSuccessMessage(null)}
+              className="text-white/80 hover:text-white p-1"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ================= STICKY QUICK WHATSAPP ORDER BAR (Active when items are in cart) ================= */}
+      {cartCount > 0 && !isCartOpen && (
+        <aside
+          id="sticky-whatsapp-cart-bar"
+          aria-label="Quick WhatsApp Checkout"
+          className="fixed bottom-[68px] sm:bottom-20 left-3 right-3 sm:left-auto sm:right-6 sm:w-[410px] z-35 animate-in slide-in-from-bottom-4 duration-300 shadow-2xl"
+        >
+          <div className="bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 text-white rounded-2xl p-2.5 sm:p-3 shadow-xl border border-emerald-400/60 backdrop-blur-md flex items-center justify-between gap-2.5">
+            <div
+              onClick={handleOpenCart}
+              className="flex-1 min-w-0 cursor-pointer select-none group"
+              title="Click to view cart details and bill"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-black uppercase tracking-wider bg-black/30 px-2 py-0.5 rounded-full text-emerald-100">
+                  {cartCount} {cartCount === 1 ? 'Dish' : 'Dishes'}
+                </span>
+                <span className="text-sm font-black text-white font-mono">
+                  ₹{cartTotalAmount}
+                </span>
+              </div>
+              <p className="text-[10px] text-emerald-100 truncate mt-0.5 flex items-center gap-1">
+                <FileSpreadsheet className="w-3 h-3 text-emerald-300 shrink-0" />
+                <span>Auto Stock Deduct & Amount Add Trigger</span>
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleQuickWhatsAppOrder}
+              disabled={isQuickOrdering}
+              className="px-3.5 py-2.5 rounded-xl bg-white hover:bg-emerald-50 text-emerald-800 font-black text-xs shadow-md flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shrink-0 disabled:opacity-80"
+              title="Send Order via WhatsApp and deduct stock & add amount in Excel"
+            >
+              <MessageCircle className="w-4 h-4 fill-emerald-600 text-emerald-600" />
+              <span>{isQuickOrdering ? 'Updating Sheet...' : 'Order on WhatsApp 📲'}</span>
+            </button>
+          </div>
+        </aside>
       )}
 
       {/* ================= NAVIGATION BAR (Home, Cart Section, Profile Section) ================= */}
@@ -677,6 +772,7 @@ export const App: React.FC = () => {
         toast={cartToast}
         onClose={() => setCartToast(null)}
         onOpenCart={handleOpenCart}
+        onWhatsAppOrder={handleQuickWhatsAppOrder}
       />
 
       {/* Video / Reel Player Modal */}

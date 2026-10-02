@@ -138,12 +138,18 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
                 {/* Dark Gradient Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20 pointer-events-none" />
 
-                {/* Top Overlay: Offer or Chef Tag */}
-                <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-white bg-stone-900/80 backdrop-blur-xs px-2 py-0.5 rounded-md border border-white/20">
-                    <Sparkles className="w-2.5 h-2.5 text-amber-400" />
-                    Spotlight
-                  </span>
+                {/* Top Overlay: Offer Tag or Reel Tag */}
+                <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap">
+                  {item.offer ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 px-2.5 py-0.5 rounded-full shadow-md border border-white/30 animate-pulse">
+                      🔥 {item.offer}
+                    </span>
+                  ) : hasVideo ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-white bg-stone-900/85 backdrop-blur-xs px-2 py-0.5 rounded-full border border-white/20">
+                      <Play className="w-2.5 h-2.5 fill-rose-500 text-rose-500" />
+                      Reel
+                    </span>
+                  ) : null}
                 </div>
 
                 {/* Video Button */}

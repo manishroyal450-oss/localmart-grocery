@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getCategoryIcon } from '../services/menuService';
+import { getCategoryIcon, sortCustomCategories } from '../services/menuService';
 
 interface CategoryFilterProps {
   categories: string[];
@@ -18,6 +18,10 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
   totalCount,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const sortedCategories = useMemo(() => {
+    return sortCustomCategories(categories);
+  }, [categories]);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
@@ -64,7 +68,7 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
           </button>
 
           {/* Dynamic Categories */}
-          {categories.map((cat) => {
+          {sortedCategories.map((cat) => {
             const isSelected = selectedCategory === cat;
             const icon = getCategoryIcon(cat);
 
