@@ -91,7 +91,6 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
   // Delivery configuration from Google Sheet (Column R & S)
   const deliveryValue = deliveryInfo?.deliveryValue ?? 50;
   const deliveryDescription = deliveryInfo?.deliveryDescription || '';
-  const freeThreshold = deliveryInfo?.freeDeliveryThreshold ?? 400;
 
   // Pre-fill user data when currentUser changes or drawer opens
   useEffect(() => {
@@ -120,13 +119,8 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
   // Calculate items subtotal
   const { totalItems, subtotal } = calculateCartSummary(cartItems, 0);
 
-  // Free delivery criteria
-  const isFreeDelivery =
-    freeThreshold !== null && freeThreshold > 0 && subtotal >= freeThreshold;
-
-  // Active delivery fee based on order type
-  const activeDeliveryCharge =
-    orderType === 'delivery' ? (isFreeDelivery ? 0 : deliveryValue) : 0;
+  // Active delivery fee based on order type (Column R) - NEVER removed by description
+  const activeDeliveryCharge = orderType === 'delivery' ? deliveryValue : 0;
   const packagingCharge = 0;
   const grandTotal = subtotal + activeDeliveryCharge + packagingCharge;
 
@@ -232,7 +226,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
       `--------------------------------------\n` +
       `💵 *Items Subtotal:* ₹${subtotal}\n` +
       (orderType === 'delivery'
-        ? `🚚 *Delivery Charges:* ${isFreeDelivery ? 'FREE (₹0)' : `₹${deliveryValue}`}\n`
+        ? `🚚 *Delivery Charges:* ₹${deliveryValue}\n`
         : '') +
       `💰 *Grand Total:* ₹${grandTotal}\n` +
       `--------------------------------------\n` +
@@ -744,16 +738,9 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                       Delivery Charges
                     </span>
                     {orderType === 'delivery' ? (
-                      isFreeDelivery ? (
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 font-mono">
-                          <span className="line-through text-stone-400 font-normal">₹{deliveryValue}</span>
-                          <span>FREE</span>
-                        </span>
-                      ) : (
-                        <span className="font-bold text-stone-900 dark:text-stone-100 font-mono">
-                          ₹{deliveryValue}
-                        </span>
-                      )
+                      <span className="font-bold text-stone-900 dark:text-stone-100 font-mono">
+                        ₹{deliveryValue}
+                      </span>
                     ) : (
                       <span className="text-emerald-600 dark:text-emerald-400 font-bold font-mono">
                         ₹0 ({orderType === 'dine-in' ? 'Dine-In' : 'Takeaway'})
@@ -763,25 +750,10 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
 
                   {/* Column S: Delivery Description in paragraph form right below delivery value */}
                   {deliveryDescription && (
-                    <div className="p-2.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 border border-amber-200/90 dark:border-amber-800/60 text-xs text-amber-950 dark:text-amber-200 shadow-2xs space-y-1">
+                    <div className="p-2.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 border border-amber-200/90 dark:border-amber-800/60 text-xs text-amber-950 dark:text-amber-200 shadow-2xs">
                       <p className="font-medium text-[11px] leading-relaxed">
                         {deliveryDescription}
                       </p>
-                      {orderType === 'delivery' && (
-                        <div className="pt-1 border-t border-amber-200/60 dark:border-amber-800/40 flex items-center justify-between text-[10px] font-bold">
-                          {isFreeDelivery ? (
-                            <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                              <span>🎉</span>
-                              <span>FREE Delivery Unlocked!</span>
-                            </span>
-                          ) : freeThreshold ? (
-                            <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1">
-                              <span>💡</span>
-                              <span>Add ₹{freeThreshold - subtotal} more items for FREE Delivery!</span>
-                            </span>
-                          ) : null}
-                        </div>
-                      )}
                     </div>
                   )}
 

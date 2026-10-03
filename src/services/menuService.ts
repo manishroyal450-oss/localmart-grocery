@@ -110,12 +110,10 @@ export function parseDeliveryInfo(rawText: string): DeliveryInfo {
     console.error('Error parsing delivery info from sheet:', err);
   }
 
-  const freeDeliveryThreshold = parseFreeDeliveryThreshold(deliveryDescription) || 400;
-
   return {
     deliveryValue,
     deliveryDescription,
-    freeDeliveryThreshold,
+    freeDeliveryThreshold: null,
   };
 }
 
