@@ -24,6 +24,7 @@ interface ZomatoDishCardProps {
   onAddToCart?: (item: MenuItem, variant?: string, price?: number) => void;
   cartQuantity?: number;
   onUpdateQuantity?: (delta: number) => void;
+  variantQuantities?: Record<string, number>;
 }
 
 export const ZomatoDishCard: React.FC<ZomatoDishCardProps> = ({
@@ -33,6 +34,7 @@ export const ZomatoDishCard: React.FC<ZomatoDishCardProps> = ({
   onAddToCart,
   cartQuantity = 0,
   onUpdateQuantity,
+  variantQuantities,
 }) => {
   const [imageLoaded, setImageLoaded] = useState<boolean>(false);
   const [imageError, setImageError] = useState<boolean>(false);
@@ -202,11 +204,34 @@ export const ZomatoDishCard: React.FC<ZomatoDishCardProps> = ({
         <div className="mt-3 pt-3 border-t border-stone-100 dark:border-stone-800 flex flex-col gap-2.5">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <SmartPricingBadge item={item} />
+              <SmartPricingBadge
+                item={item}
+                onSelectVariant={(variantLabel, price) => {
+                  onAddToCart?.(item, variantLabel, price);
+                }}
+                variantQuantities={variantQuantities}
+              />
             </div>
 
-            {/* Interactive Add to Cart or Quantity Adjuster with Water Droplet Bubble Motion */}
-            {cartQuantity > 0 ? (
+            {/* Interactive Add to Cart or Quantity Adjuster */}
+            {hasMultipleVariants ? (
+              <button
+                type="button"
+                onClick={handleAddClick}
+                className={`relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[22px] text-xs font-black transition-all duration-300 shadow-sm active:scale-90 cursor-pointer select-none ${
+                  cartQuantity > 0
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-500/25 ring-2 ring-rose-400/40'
+                    : 'bg-gradient-to-br from-rose-50 via-rose-100/90 to-rose-200/70 dark:from-rose-950/80 dark:via-rose-900/60 dark:to-stone-900 text-rose-600 dark:text-rose-300 hover:text-white dark:hover:text-white hover:bg-rose-600 dark:hover:bg-rose-600 border border-rose-300/80 dark:border-rose-750/70 shadow-[0_4px_12px_rgba(225,29,72,0.18),inset_0_2px_4px_rgba(255,255,255,0.85)]'
+                }`}
+                title={cartQuantity > 0 ? `${cartQuantity} in cart • Click to add more sizes` : 'Add to Cart 🛒'}
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+                <span className="tracking-tight">
+                  {cartQuantity > 0 ? `ADD + (${cartQuantity})` : 'ADD 🛒'}
+                </span>
+                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showVariantPicker ? 'rotate-180' : ''}`} />
+              </button>
+            ) : cartQuantity > 0 ? (
               <div className="relative inline-flex items-center rounded-[20px] bg-stone-900/95 dark:bg-stone-850/95 text-white p-0.5 shadow-md border border-stone-700/80 animate-droplet-btn">
                 <span className="absolute top-0.5 left-2 w-2.5 h-1 bg-white/40 rounded-full blur-[0.2px] pointer-events-none" />
                 <button
@@ -248,9 +273,6 @@ export const ZomatoDishCard: React.FC<ZomatoDishCardProps> = ({
 
                 <ShoppingCart className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
                 <span className="tracking-tight">ADD 🛒</span>
-                {hasMultipleVariants && (
-                  <ChevronDown className="w-3 h-3 opacity-60" />
-                )}
               </button>
             )}
           </div>
@@ -259,20 +281,30 @@ export const ZomatoDishCard: React.FC<ZomatoDishCardProps> = ({
           {showVariantPicker && hasMultipleVariants && (
             <div className="mt-1 p-2 bg-stone-50 dark:bg-stone-850 rounded-xl border border-stone-200 dark:border-stone-750 animate-in fade-in zoom-in-95 duration-150">
               <span className="block text-[10px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider mb-1.5">
-                Select Option to Add 🛒
+                Select Size / Option to Add 🛒
               </span>
               <div className="flex flex-wrap gap-1.5">
-                {variants.map((v) => (
-                  <button
-                    key={v.label}
-                    type="button"
-                    onClick={(e) => handleSelectVariant(e, v.label, v.price)}
-                    className="flex-1 min-w-[70px] py-1 px-2 rounded-lg bg-white dark:bg-stone-800 hover:bg-rose-600 dark:hover:bg-rose-600 text-stone-800 dark:text-stone-200 hover:text-white dark:hover:text-white border border-stone-200 dark:border-stone-700 hover:border-rose-600 text-xs font-bold transition-all shadow-2xs flex items-center justify-between gap-1 cursor-pointer"
-                  >
-                    <span>{v.label}</span>
-                    <span className="text-[11px] font-black">₹{v.price}</span>
-                  </button>
-                ))}
+                {variants.map((v) => {
+                  const vQty = variantQuantities?.[v.label] || 0;
+                  return (
+                    <button
+                      key={v.label}
+                      type="button"
+                      onClick={(e) => handleSelectVariant(e, v.label, v.price)}
+                      className={`flex-1 min-w-[70px] py-1.5 px-2 rounded-lg border text-xs font-bold transition-all shadow-2xs flex items-center justify-between gap-1 cursor-pointer active:scale-95 ${
+                        vQty > 0
+                          ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                          : 'bg-white dark:bg-stone-800 hover:bg-rose-500 hover:text-white dark:hover:bg-rose-600 text-stone-800 dark:text-stone-200 border-stone-200 dark:border-stone-700'
+                      }`}
+                      title={`Add ${v.label} (₹${v.price}) to cart`}
+                    >
+                      <span>{v.label}</span>
+                      <span className="text-[11px] font-black">
+                        ₹{v.price} {vQty > 0 ? `(${vQty})` : '+'}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

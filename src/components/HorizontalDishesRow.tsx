@@ -217,7 +217,12 @@ export const HorizontalDishesRow: React.FC<HorizontalDishesRowProps> = ({
                 <div className="mt-3 pt-2.5 border-t border-stone-100 dark:border-stone-800 flex flex-col gap-2">
                   <div className="flex items-center justify-between gap-1.5">
                     <div className="min-w-0">
-                      <SmartPricingBadge item={item} />
+                      <SmartPricingBadge
+                        item={item}
+                        onSelectVariant={(variantLabel, price) => {
+                          onAddToCart?.(item, variantLabel, price);
+                        }}
+                      />
                     </div>
 
                     {quantity > 0 ? (

@@ -1,12 +1,18 @@
 import React from 'react';
 import { MenuItem } from '../types';
-import { Tag } from 'lucide-react';
+import { Tag, Plus, Check } from 'lucide-react';
 
 interface SmartPricingBadgeProps {
   item: MenuItem;
+  onSelectVariant?: (variantLabel: string, price: number) => void;
+  variantQuantities?: Record<string, number>;
 }
 
-export const SmartPricingBadge: React.FC<SmartPricingBadgeProps> = ({ item }) => {
+export const SmartPricingBadge: React.FC<SmartPricingBadgeProps> = ({
+  item,
+  onSelectVariant,
+  variantQuantities,
+}) => {
   const { standardPrice, halfPrice, fullPrice, regularPrice, mediumPrice, largePrice, offer } = item;
 
   // Case 1: Pizza sizes (Regular / Medium / Large)
@@ -27,26 +33,113 @@ export const SmartPricingBadge: React.FC<SmartPricingBadgeProps> = ({ item }) =>
   };
 
   if (hasPizzaSizes) {
+    const regularQty = variantQuantities?.['Regular'] || 0;
+    const mediumQty = variantQuantities?.['Medium'] || 0;
+    const largeQty = variantQuantities?.['Large'] || 0;
+
     return (
       <div className="flex flex-col items-start gap-0.5" id={`pricing-sizes-container-${item.id}`}>
         <div className="flex flex-wrap items-center gap-1.5" id={`pricing-sizes-${item.id}`}>
           {regularPrice && (
-            <div className="inline-flex items-center px-2 py-1 rounded-md bg-amber-100/90 dark:bg-amber-950/80 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 text-xs font-semibold shadow-xs">
-              <span className="text-[10px] font-black text-amber-800 dark:text-amber-300 uppercase tracking-wider mr-1 px-1 py-0.2 bg-amber-200/80 dark:bg-amber-900/60 rounded">R</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectVariant?.('Regular', Number(regularPrice));
+              }}
+              title="Click to add Regular size to cart"
+              className={`group/btn inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 border ${
+                regularQty > 0
+                  ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-400 dark:border-rose-700 ring-1 ring-rose-400'
+                  : 'bg-amber-100/90 dark:bg-amber-950/80 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-amber-950 dark:text-amber-200 border-amber-300 dark:border-amber-800 hover:border-rose-400'
+              }`}
+            >
+              <span
+                className={`text-[10px] font-black uppercase tracking-wider mr-1 px-1 py-0.2 rounded transition-colors ${
+                  regularQty > 0
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-amber-200/80 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 group-hover/btn:bg-rose-600 group-hover/btn:text-white'
+                }`}
+              >
+                R
+              </span>
               <span className="font-bold">₹{regularPrice}</span>
-            </div>
+              {regularQty > 0 ? (
+                <span className="ml-1 px-1.5 py-0.2 bg-rose-600 text-white text-[10px] font-black rounded-full leading-none">
+                  {regularQty}
+                </span>
+              ) : (
+                <Plus className="w-2.5 h-2.5 ml-1 opacity-0 group-hover/btn:opacity-100 text-rose-600 dark:text-rose-400 transition-opacity" />
+              )}
+            </button>
           )}
+
           {mediumPrice && (
-            <div className="inline-flex items-center px-2 py-1 rounded-md bg-amber-100/90 dark:bg-amber-950/80 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 text-xs font-semibold shadow-xs">
-              <span className="text-[10px] font-black text-amber-800 dark:text-amber-300 uppercase tracking-wider mr-1 px-1 py-0.2 bg-amber-200/80 dark:bg-amber-900/60 rounded">M</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectVariant?.('Medium', Number(mediumPrice));
+              }}
+              title="Click to add Medium size to cart"
+              className={`group/btn inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 border ${
+                mediumQty > 0
+                  ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-400 dark:border-rose-700 ring-1 ring-rose-400'
+                  : 'bg-amber-100/90 dark:bg-amber-950/80 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-amber-950 dark:text-amber-200 border-amber-300 dark:border-amber-800 hover:border-rose-400'
+              }`}
+            >
+              <span
+                className={`text-[10px] font-black uppercase tracking-wider mr-1 px-1 py-0.2 rounded transition-colors ${
+                  mediumQty > 0
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-amber-200/80 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 group-hover/btn:bg-rose-600 group-hover/btn:text-white'
+                }`}
+              >
+                M
+              </span>
               <span className="font-bold">₹{mediumPrice}</span>
-            </div>
+              {mediumQty > 0 ? (
+                <span className="ml-1 px-1.5 py-0.2 bg-rose-600 text-white text-[10px] font-black rounded-full leading-none">
+                  {mediumQty}
+                </span>
+              ) : (
+                <Plus className="w-2.5 h-2.5 ml-1 opacity-0 group-hover/btn:opacity-100 text-rose-600 dark:text-rose-400 transition-opacity" />
+              )}
+            </button>
           )}
+
           {largePrice && (
-            <div className="inline-flex items-center px-2 py-1 rounded-md bg-amber-100/90 dark:bg-amber-950/80 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 text-xs font-semibold shadow-xs">
-              <span className="text-[10px] font-black text-amber-800 dark:text-amber-300 uppercase tracking-wider mr-1 px-1 py-0.2 bg-amber-200/80 dark:bg-amber-900/60 rounded">L</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectVariant?.('Large', Number(largePrice));
+              }}
+              title="Click to add Large size to cart"
+              className={`group/btn inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 border ${
+                largeQty > 0
+                  ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-400 dark:border-rose-700 ring-1 ring-rose-400'
+                  : 'bg-amber-100/90 dark:bg-amber-950/80 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-amber-950 dark:text-amber-200 border-amber-300 dark:border-amber-800 hover:border-rose-400'
+              }`}
+            >
+              <span
+                className={`text-[10px] font-black uppercase tracking-wider mr-1 px-1 py-0.2 rounded transition-colors ${
+                  largeQty > 0
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-amber-200/80 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 group-hover/btn:bg-rose-600 group-hover/btn:text-white'
+                }`}
+              >
+                L
+              </span>
               <span className="font-bold">₹{largePrice}</span>
-            </div>
+              {largeQty > 0 ? (
+                <span className="ml-1 px-1.5 py-0.2 bg-rose-600 text-white text-[10px] font-black rounded-full leading-none">
+                  {largeQty}
+                </span>
+              ) : (
+                <Plus className="w-2.5 h-2.5 ml-1 opacity-0 group-hover/btn:opacity-100 text-rose-600 dark:text-rose-400 transition-opacity" />
+              )}
+            </button>
           )}
         </div>
         {/* Owner Special Offer shown right below the prices */}
@@ -59,20 +152,62 @@ export const SmartPricingBadge: React.FC<SmartPricingBadgeProps> = ({ item }) =>
   const hasPortionPricing = Boolean(halfPrice || (fullPrice && !standardPrice));
 
   if (hasPortionPricing) {
+    const halfQty = variantQuantities?.['Half'] || 0;
+    const fullQty = variantQuantities?.['Full'] || 0;
+
     return (
       <div className="flex flex-col items-start gap-0.5" id={`pricing-halffull-container-${item.id}`}>
         <div className="flex flex-wrap items-center gap-1.5" id={`pricing-halffull-${item.id}`}>
           {halfPrice && (
-            <div className="inline-flex items-center px-2 py-1 rounded-md bg-emerald-100/90 dark:bg-emerald-950/80 text-emerald-950 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 text-xs font-semibold shadow-xs">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectVariant?.('Half', Number(halfPrice));
+              }}
+              title="Click to add Half portion to cart"
+              className={`group/btn inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 border ${
+                halfQty > 0
+                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border-emerald-400 dark:border-emerald-700 ring-1 ring-emerald-400'
+                  : 'bg-emerald-100/90 dark:bg-emerald-950/80 hover:bg-emerald-200/80 text-emerald-950 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800'
+              }`}
+            >
               <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide mr-1">Half</span>
               <span className="font-bold">₹{halfPrice}</span>
-            </div>
+              {halfQty > 0 ? (
+                <span className="ml-1 px-1.5 py-0.2 bg-emerald-600 text-white text-[10px] font-black rounded-full leading-none">
+                  {halfQty}
+                </span>
+              ) : (
+                <Plus className="w-2.5 h-2.5 ml-1 opacity-0 group-hover/btn:opacity-100 text-emerald-600 dark:text-emerald-400 transition-opacity" />
+              )}
+            </button>
           )}
+
           {fullPrice && (
-            <div className="inline-flex items-center px-2 py-1 rounded-md bg-emerald-100/90 dark:bg-emerald-950/80 text-emerald-950 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 text-xs font-semibold shadow-xs">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectVariant?.('Full', Number(fullPrice));
+              }}
+              title="Click to add Full portion to cart"
+              className={`group/btn inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 border ${
+                fullQty > 0
+                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border-emerald-400 dark:border-emerald-700 ring-1 ring-emerald-400'
+                  : 'bg-emerald-100/90 dark:bg-emerald-950/80 hover:bg-emerald-200/80 text-emerald-950 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800'
+              }`}
+            >
               <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide mr-1">Full</span>
               <span className="font-bold">₹{fullPrice}</span>
-            </div>
+              {fullQty > 0 ? (
+                <span className="ml-1 px-1.5 py-0.2 bg-emerald-600 text-white text-[10px] font-black rounded-full leading-none">
+                  {fullQty}
+                </span>
+              ) : (
+                <Plus className="w-2.5 h-2.5 ml-1 opacity-0 group-hover/btn:opacity-100 text-emerald-600 dark:text-emerald-400 transition-opacity" />
+              )}
+            </button>
           )}
         </div>
         {/* Owner Special Offer shown right below the prices */}

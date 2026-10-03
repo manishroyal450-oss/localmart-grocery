@@ -296,6 +296,21 @@ export const App: React.FC = () => {
     [cartItems]
   );
 
+  const getItemVariantQuantities = useCallback(
+    (itemId: string | number): Record<string, number> => {
+      const cleanId = String(itemId).replace(/\s+/g, '-');
+      const result: Record<string, number> = {};
+      cartItems
+        .filter((ci) => String(ci.item.id).replace(/\s+/g, '-') === cleanId)
+        .forEach((ci) => {
+          const v = ci.variant || 'Standard';
+          result[v] = (result[v] || 0) + ci.quantity;
+        });
+      return result;
+    },
+    [cartItems]
+  );
+
   // Quick WhatsApp Order with Automatic Stock Deduct & Amount Add trigger
   const [isQuickOrdering, setIsQuickOrdering] = useState<boolean>(false);
   const [orderSyncSuccessMessage, setOrderSyncSuccessMessage] = useState<string | null>(null);
@@ -622,6 +637,7 @@ export const App: React.FC = () => {
                             }
                             onAddToCart={handleAddToCart}
                             cartQuantity={getItemQuantity(item.id)}
+                            variantQuantities={getItemVariantQuantities(item.id)}
                             onUpdateQuantity={(delta) => handleUpdateItemQuantity(item, delta)}
                           />
                         ))}
@@ -670,6 +686,7 @@ export const App: React.FC = () => {
                       }
                       onAddToCart={handleAddToCart}
                       cartQuantity={getItemQuantity(item.id)}
+                      variantQuantities={getItemVariantQuantities(item.id)}
                       onUpdateQuantity={(delta) => handleUpdateItemQuantity(item, delta)}
                     />
                   ))}
@@ -717,47 +734,6 @@ export const App: React.FC = () => {
             </button>
           </div>
         </div>
-      )}
-
-      {/* ================= STICKY QUICK WHATSAPP ORDER BAR (Active when items are in cart) ================= */}
-      {cartCount > 0 && !isCartOpen && (
-        <aside
-          id="sticky-whatsapp-cart-bar"
-          aria-label="Quick WhatsApp Checkout"
-          className="fixed bottom-[68px] sm:bottom-20 left-3 right-3 sm:left-auto sm:right-6 sm:w-[410px] z-35 animate-in slide-in-from-bottom-4 duration-300 shadow-2xl"
-        >
-          <div className="bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 text-white rounded-2xl p-2.5 sm:p-3 shadow-xl border border-emerald-400/60 backdrop-blur-md flex items-center justify-between gap-2.5">
-            <div
-              onClick={handleOpenCart}
-              className="flex-1 min-w-0 cursor-pointer select-none group"
-              title="Click to view cart details and bill"
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-black uppercase tracking-wider bg-black/30 px-2 py-0.5 rounded-full text-emerald-100">
-                  {cartCount} {cartCount === 1 ? 'Dish' : 'Dishes'}
-                </span>
-                <span className="text-sm font-black text-white font-mono">
-                  ₹{cartTotalAmount}
-                </span>
-              </div>
-              <p className="text-[10px] text-emerald-100 truncate mt-0.5 flex items-center gap-1">
-                <FileSpreadsheet className="w-3 h-3 text-emerald-300 shrink-0" />
-                <span>Auto Stock Deduct & Amount Add Trigger</span>
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleQuickWhatsAppOrder}
-              disabled={isQuickOrdering}
-              className="px-3.5 py-2.5 rounded-xl bg-white hover:bg-emerald-50 text-emerald-800 font-black text-xs shadow-md flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shrink-0 disabled:opacity-80"
-              title="Send Order via WhatsApp and deduct stock & add amount in Excel"
-            >
-              <MessageCircle className="w-4 h-4 fill-emerald-600 text-emerald-600" />
-              <span>{isQuickOrdering ? 'Updating Sheet...' : 'Order on WhatsApp 📲'}</span>
-            </button>
-          </div>
-        </aside>
       )}
 
       {/* ================= NAVIGATION BAR (Home, Cart Section, Profile Section) ================= */}

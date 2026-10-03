@@ -825,17 +825,6 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
               <span>Print / Download PDF Bill (Friends 4 Ever Cafe)</span>
             </button>
 
-            {/* Auto Stock Deduct & Excel Update Notification */}
-            <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 rounded-xl border border-emerald-200/80 dark:border-emerald-800/80 text-[11px] text-emerald-800 dark:text-emerald-300">
-              <span className="flex items-center gap-1.5 font-bold">
-                <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                Excel Auto-Update Active
-              </span>
-              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 rounded-full font-medium text-emerald-700 dark:text-emerald-300">
-                Stock Deduct & Amount Add
-              </span>
-            </div>
-
             {/* WhatsApp Checkout Button (Single Direct Action) */}
             <button
               type="button"
@@ -845,7 +834,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
               title="Send order directly to Cafe on WhatsApp"
             >
               <MessageCircle className="w-4 h-4 fill-white" />
-              <span>{isPlacingOrder ? 'Updating Excel & Opening WhatsApp...' : 'Order via WhatsApp 📲'}</span>
+              <span>{isPlacingOrder ? 'Opening WhatsApp...' : 'Order via WhatsApp 📲'}</span>
             </button>
 
             <p className="text-[10px] text-center text-stone-500 dark:text-stone-400 font-medium">
