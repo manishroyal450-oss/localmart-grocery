@@ -6,7 +6,7 @@ export const GOOGLE_SHEET_ENDPOINT = 'https://docs.google.com/spreadsheets/d/1qV
 export const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHl-grnqg64pbYukq0WnDK73opMdgZ8n1WP7bxcdx7xO0NXJBw7jJPSX_aEnQtfFGLqA/exec';
 export const CACHE_STORAGE_KEY = 'cafe_menu_cached_data_v1';
 export const CACHE_TIME_KEY = 'cafe_menu_last_synced_v1';
-export const DELIVERY_CACHE_KEY = 'cafe_delivery_info_v1';
+export const DELIVERY_CACHE_KEY = 'cafe_delivery_info_v2';
 export const TABLES_CACHE_KEY = 'cafe_tables_v1';
 
 export function parseTablesFromGviz(rawText: string): string[] {
@@ -76,7 +76,7 @@ export function parseFreeDeliveryThreshold(desc: string): number | null {
 }
 
 export function parseDeliveryInfo(rawText: string): DeliveryInfo {
-  let deliveryValue = 40;
+  let deliveryValue: number | null = null;
   let deliveryDescription = '';
 
   try {
@@ -92,17 +92,33 @@ export function parseDeliveryInfo(rawText: string): DeliveryInfo {
           const cellR = row.c[17]; // Col R: deliveryvalue
           const cellS = row.c[18]; // Col S: deliverydescription
 
-          const valR = cellR ? (cellR.f !== undefined && cellR.f !== null ? String(cellR.f) : cellR.v !== undefined && cellR.v !== null ? String(cellR.v) : '') : '';
-          const valS = cellS ? (cellS.f !== undefined && cellS.f !== null ? String(cellS.f) : cellS.v !== undefined && cellS.v !== null ? String(cellS.v) : '') : '';
+          const valR =
+            cellR
+              ? cellR.f !== undefined && cellR.f !== null
+                ? String(cellR.f)
+                : cellR.v !== undefined && cellR.v !== null
+                ? String(cellR.v)
+                : ''
+              : '';
+          const valS =
+            cellS
+              ? cellS.f !== undefined && cellS.f !== null
+                ? String(cellS.f)
+                : cellS.v !== undefined && cellS.v !== null
+                ? String(cellS.v)
+                : ''
+              : '';
 
-          if (valR && !isNaN(Number(valR.replace(/[^\d.]/g, '')))) {
-            const num = Number(valR.replace(/[^\d.]/g, ''));
-            if (num > 0) deliveryValue = num;
+          if (deliveryValue === null && valR.trim() !== '') {
+            const cleanVal = valR.replace(/[^\d.]/g, '');
+            if (cleanVal !== '' && !isNaN(Number(cleanVal))) {
+              deliveryValue = Number(cleanVal);
+            }
           }
-          if (valS && valS.trim().length > 0) {
+          if (!deliveryDescription && valS.trim().length > 0) {
             deliveryDescription = valS.trim();
           }
-          if (deliveryDescription && deliveryValue) break;
+          if (deliveryValue !== null && deliveryDescription) break;
         }
       }
     }
@@ -111,7 +127,7 @@ export function parseDeliveryInfo(rawText: string): DeliveryInfo {
   }
 
   return {
-    deliveryValue,
+    deliveryValue: deliveryValue !== null ? deliveryValue : 0,
     deliveryDescription,
     freeDeliveryThreshold: null,
   };
@@ -274,9 +290,9 @@ export async function fetchMenuData(): Promise<{
       const cached = localStorage.getItem(CACHE_STORAGE_KEY);
       const cachedTime = localStorage.getItem(CACHE_TIME_KEY) || 'Previously cached';
       let cachedDelivery: DeliveryInfo = {
-        deliveryValue: 50,
+        deliveryValue: 0,
         deliveryDescription: '',
-        freeDeliveryThreshold: 400,
+        freeDeliveryThreshold: null,
       };
       try {
         const dRaw = localStorage.getItem(DELIVERY_CACHE_KEY);

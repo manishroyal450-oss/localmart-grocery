@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ShoppingCart,
   X,
@@ -62,6 +62,40 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
   const [activeBillData, setActiveBillData] = useState<BillData | null>(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState<boolean>(false);
 
+  // Mobile touch swipe-to-close gesture handling
+  const [dragOffset, setDragOffset] = useState<number>(0);
+  const touchStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const isDraggingDrawer = useRef<boolean>(false);
+
+  const handleDrawerTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    isDraggingDrawer.current = true;
+  };
+
+  const handleDrawerTouchMove = (e: React.TouchEvent) => {
+    if (!isDraggingDrawer.current || e.touches.length !== 1) return;
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const deltaX = currentX - touchStartPos.current.x;
+    const deltaY = currentY - touchStartPos.current.y;
+
+    // Swipe right (horizontal) to slide drawer closed
+    if (deltaX > 0 && deltaX > Math.abs(deltaY) * 0.8) {
+      setDragOffset(deltaX);
+    }
+  };
+
+  const handleDrawerTouchEnd = () => {
+    if (isDraggingDrawer.current) {
+      if (dragOffset > 80) {
+        onClose();
+      }
+      setDragOffset(0);
+      isDraggingDrawer.current = false;
+    }
+  };
+
   // Available tables list from Google Sheet (Column T)
   const availableTables =
     tables && tables.length > 0
@@ -89,7 +123,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
   }, [orderType]);
 
   // Delivery configuration from Google Sheet (Column R & S)
-  const deliveryValue = deliveryInfo?.deliveryValue ?? 50;
+  const deliveryValue = deliveryInfo?.deliveryValue ?? 0;
   const deliveryDescription = deliveryInfo?.deliveryDescription || '';
 
   // Pre-fill user data when currentUser changes or drawer opens
@@ -306,8 +340,20 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
       {/* Drawer Container */}
       <div
         id="cafe-cart-sidebar"
+        onTouchStart={handleDrawerTouchStart}
+        onTouchMove={handleDrawerTouchMove}
+        onTouchEnd={handleDrawerTouchEnd}
+        style={{
+          transform: dragOffset > 0 ? `translateX(${dragOffset}px)` : undefined,
+          transition: dragOffset > 0 ? 'none' : 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
         className="relative z-10 w-full max-w-lg bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 h-full shadow-2xl flex flex-col justify-between overflow-hidden animate-in slide-in-from-right duration-300 border-l border-stone-200 dark:border-stone-800"
       >
+        {/* Mobile Drag Indicator Bar */}
+        <div className="w-full flex sm:hidden items-center justify-center pt-2 pb-0.5 bg-white dark:bg-stone-900 border-b border-stone-100 dark:border-stone-800/50">
+          <div className="w-10 h-1 bg-stone-300 dark:bg-stone-700 rounded-full" />
+        </div>
+
         {/* Header */}
         <div className="bg-white dark:bg-stone-900 px-4 sm:px-6 py-4 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between shadow-2xs">
           <div className="flex items-center gap-2.5">

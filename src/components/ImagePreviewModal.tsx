@@ -14,6 +14,25 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
   imageUrl,
   itemName,
 }) => {
+  const [dragY, setDragY] = React.useState<number>(0);
+  const touchStartY = React.useRef<number>(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const deltaY = e.touches[0].clientY - touchStartY.current;
+    if (deltaY > 0) setDragY(deltaY);
+  };
+
+  const handleTouchEnd = () => {
+    if (dragY > 80) {
+      onClose();
+    }
+    setDragY(0);
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -37,9 +56,21 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
       id="image-preview-modal"
     >
       <div
-        className="relative max-w-2xl w-full bg-stone-900 rounded-3xl overflow-hidden shadow-2xl border border-stone-800 flex flex-col"
+        className="relative max-w-2xl w-full bg-stone-900 rounded-3xl overflow-hidden shadow-2xl border border-stone-800 flex flex-col transition-transform"
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
+          transition: dragY > 0 ? 'none' : 'transform 0.2s ease-out',
+        }}
       >
+        {/* Mobile Swipe-to-dismiss Handle */}
+        <div className="w-full flex sm:hidden items-center justify-center pt-2 pb-0.5 bg-stone-900">
+          <div className="w-10 h-1 bg-stone-700 rounded-full" />
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between p-4 px-6 border-b border-stone-800 text-white">
           <h3 className="font-bold text-lg text-white font-display">

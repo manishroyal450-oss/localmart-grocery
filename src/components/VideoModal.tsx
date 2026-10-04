@@ -14,6 +14,25 @@ export const VideoModal: React.FC<VideoModalProps> = ({
   videoUrl,
   itemName,
 }) => {
+  const [dragY, setDragY] = React.useState<number>(0);
+  const touchStartY = React.useRef<number>(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const deltaY = e.touches[0].clientY - touchStartY.current;
+    if (deltaY > 0) setDragY(deltaY);
+  };
+
+  const handleTouchEnd = () => {
+    if (dragY > 80) {
+      onClose();
+    }
+    setDragY(0);
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -39,9 +58,21 @@ export const VideoModal: React.FC<VideoModalProps> = ({
       id="video-preview-modal"
     >
       <div
-        className="relative w-full max-w-md bg-white dark:bg-stone-900 rounded-3xl overflow-hidden shadow-2xl border border-stone-100 dark:border-stone-800 text-stone-900 dark:text-stone-100"
+        className="relative w-full max-w-md bg-white dark:bg-stone-900 rounded-3xl overflow-hidden shadow-2xl border border-stone-100 dark:border-stone-800 text-stone-900 dark:text-stone-100 transition-transform"
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
+          transition: dragY > 0 ? 'none' : 'transform 0.2s ease-out',
+        }}
       >
+        {/* Mobile Swipe-to-dismiss Handle */}
+        <div className="w-full flex sm:hidden items-center justify-center pt-2 pb-0.5 bg-stone-50/80 dark:bg-stone-850">
+          <div className="w-10 h-1 bg-stone-300 dark:bg-stone-700 rounded-full" />
+        </div>
+
         {/* Modal Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-850">
           <div className="flex items-center gap-2">

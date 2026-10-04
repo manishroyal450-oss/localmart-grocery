@@ -15,6 +15,8 @@ import CafeCartDrawer from './components/CafeCartDrawer';
 import CafeNavigationBar from './components/CafeNavigationBar';
 import CafeFooter from './components/CafeFooter';
 import CartToast, { ToastPayload } from './components/CartToast';
+import MobileGestureBackHandler from './components/MobileGestureBackHandler';
+import { useMobileBackHandler } from './hooks/useMobileBackHandler';
 import {
   loadCartFromStorage,
   saveCartToStorage,
@@ -51,9 +53,9 @@ export const App: React.FC = () => {
 
   // Delivery configuration from Google Sheet (Column R: deliveryvalue, Column S: deliverydescription)
   const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo>({
-    deliveryValue: 50,
+    deliveryValue: 0,
     deliveryDescription: '',
-    freeDeliveryThreshold: 400,
+    freeDeliveryThreshold: null,
   });
 
   // Table list from Google Sheet (Column T: Table)
@@ -421,9 +423,37 @@ export const App: React.FC = () => {
     });
   };
 
-  const handleCloseVideo = () => {
+  const handleCloseVideo = useCallback(() => {
     setVideoModal((prev) => ({ ...prev, isOpen: false }));
-  };
+  }, []);
+
+  const handleClosePreview = useCallback(() => {
+    setPreviewModal({ isOpen: false, url: '', name: '' });
+  }, []);
+
+  const handleResetCategory = useCallback(() => {
+    setSelectedCategory('All');
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('');
+  }, []);
+
+  // Mobile Back Button (Hardware / Popstate) & Edge Gesture Handling
+  const { triggerMobileBack, handleModalCloseWithHistory } = useMobileBackHandler({
+    isCartOpen,
+    onCloseCart: handleCloseCart,
+    isVideoOpen: videoModal.isOpen,
+    onCloseVideo: handleCloseVideo,
+    isPreviewOpen: previewModal.isOpen,
+    onClosePreview: handleClosePreview,
+    isProfileOpen,
+    onCloseProfile: handleCloseProfile,
+    selectedCategory,
+    onResetCategory: handleResetCategory,
+    searchQuery,
+    onClearSearch: handleClearSearch,
+  });
 
   return (
     <div className="min-h-screen flex flex-col bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 selection:bg-rose-100 dark:selection:bg-rose-900/40 selection:text-rose-900 dark:selection:text-rose-200 overflow-x-hidden w-full max-w-full pb-18 sm:pb-12 transition-colors duration-200">
@@ -750,7 +780,7 @@ export const App: React.FC = () => {
       {/* ================= CART SECTION DRAWER ================= */}
       <CafeCartDrawer
         isOpen={isCartOpen}
-        onClose={handleCloseCart}
+        onClose={() => handleModalCloseWithHistory(handleCloseCart)}
         cartItems={cartItems}
         onUpdateQuantity={handleUpdateCartQuantity}
         onRemoveItem={handleRemoveItem}
@@ -774,7 +804,7 @@ export const App: React.FC = () => {
         isOpen={videoModal.isOpen}
         videoUrl={videoModal.url}
         itemName={videoModal.name}
-        onClose={handleCloseVideo}
+        onClose={() => handleModalCloseWithHistory(handleCloseVideo)}
       />
 
       {/* Image Zoom Preview Modal */}
@@ -782,23 +812,26 @@ export const App: React.FC = () => {
         isOpen={previewModal.isOpen}
         imageUrl={previewModal.url}
         itemName={previewModal.name}
-        onClose={() => setPreviewModal({ isOpen: false, url: '', name: '' })}
+        onClose={() => handleModalCloseWithHistory(handleClosePreview)}
       />
 
       {/* User Profile, Sign Up & Login Modal */}
       <ProfileModal
         isOpen={isProfileOpen}
-        onClose={handleCloseProfile}
+        onClose={() => handleModalCloseWithHistory(handleCloseProfile)}
         currentUser={currentUser}
         onAuthSuccess={(user) => {
           setCurrentUser(user);
           if (user) {
             setTimeout(() => {
-              handleCloseProfile();
+              handleModalCloseWithHistory(handleCloseProfile);
             }, 700);
           }
         }}
       />
+
+      {/* Mobile-Friendly Edge Swipe Back Gesture Detector */}
+      <MobileGestureBackHandler onBack={triggerMobileBack} />
     </div>
   );
 };
