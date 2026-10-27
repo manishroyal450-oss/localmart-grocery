@@ -3,6 +3,7 @@ import { MenuItem, CafeCartItem, DeliveryInfo } from './types';
 import { fetchMenuData, getCategoryIcon, sortCustomCategories } from './services/menuService';
 import { ZomatoHeader, GOOGLE_MAPS_URL, CAFE_FULL_ADDRESS } from './components/ZomatoHeader';
 import ZomatoBanner from './components/ZomatoBanner';
+import DownloadAppBanner from './components/DownloadAppBanner';
 import CircularCategoryBar from './components/CircularCategoryBar';
 import HorizontalDishesRow from './components/HorizontalDishesRow';
 import ZomatoDishCard from './components/ZomatoDishCard';
@@ -468,6 +469,9 @@ export const App: React.FC = () => {
         cartCount={cartCount}
         activeTab={activeNavTab}
       />
+
+      {/* Download App Action Bar / Button (Between Search Bar & Banner) */}
+      <DownloadAppBanner />
 
       {/* 2. Zomato Banner (Promotional Gold / Cafe Delights Banner) */}
       <div className="max-w-7xl mx-auto w-full px-3.5 sm:px-6 overflow-hidden">
