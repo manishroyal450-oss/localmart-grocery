@@ -1,10 +1,15 @@
+import dns from 'dns';
 import express from 'express';
 import fs from 'fs';
+import https from 'https';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { ALL_PRODUCTS } from './src/data/allProducts.js';
+
+// Prefer IPv4 in container/Cloud Run environments where IPv6 routes to Google APIs can stall
+dns.setDefaultResultOrder('ipv4first');
 
 const isESM = typeof import.meta !== 'undefined' && typeof import.meta.url !== 'undefined';
 const __filename = isESM ? fileURLToPath(import.meta.url) : '';
@@ -17,75 +22,416 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// In-Memory Database State
+// In-Memory & File-Backed Database State
 let productsList = [...ALL_PRODUCTS];
 let ordersList: any[] = [];
 let customersList: any[] = [];
+
+const CAFE_ORDERS_DB_FILE = path.join(process.cwd(), '.cafe-orders-db.json');
+
+interface ServerCafeOrder {
+  orderId: string;
+  userId?: string;
+  firebaseUid?: string;
+  customerEmail?: string;
+  customerName: string;
+  customerPhone: string;
+  orderType: 'delivery' | 'dine-in' | 'takeaway';
+  tableOrAddress: string;
+  items: Array<{ name: string; variant?: string; qty: number; price: number; total: number }>;
+  itemSummary: string;
+  subtotal: number;
+  deliveryFee: number;
+  grandTotal: number;
+  status: 'pending' | 'confirmed';
+  createdAt: string;
+  dateKey: string;
+  notes?: string;
+}
+
+function extractIndianTenDigitsServer(input: string): string {
+  const trimmed = (input || '').trim();
+  let stripped = trimmed;
+  if (stripped.startsWith('+91')) {
+    stripped = stripped.slice(3);
+  } else if (stripped.startsWith('0091')) {
+    stripped = stripped.slice(4);
+  } else {
+    const rawDigits = stripped.replace(/\D/g, '');
+    if (rawDigits.length === 12 && rawDigits.startsWith('91')) {
+      return rawDigits.slice(2, 12);
+    }
+  }
+  return stripped.replace(/\D/g, '').slice(0, 10);
+}
+
+function getLocalDateKey(isoOrDate?: string | Date): string {
+  const d = isoOrDate ? new Date(isoOrDate) : new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function loadCafeOrdersFromDisk(): ServerCafeOrder[] {
+  try {
+    if (fs.existsSync(CAFE_ORDERS_DB_FILE)) {
+      const raw = fs.readFileSync(CAFE_ORDERS_DB_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    }
+  } catch (err) {
+    console.warn('[CafeOrders] Failed to read orders DB:', err);
+  }
+  return [];
+}
+
+function saveCafeOrdersToDisk(list: ServerCafeOrder[]): void {
+  try {
+    fs.writeFileSync(CAFE_ORDERS_DB_FILE, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('[CafeOrders] Failed to write orders DB:', err);
+  }
+}
+
+let cafeOrdersList: ServerCafeOrder[] = loadCafeOrdersFromDisk();
 
 /* -------------------------------------------
    API Endpoints (Fully Local / In-Memory)
    ------------------------------------------- */
 
-// 0. Dynamic Google Sheet Menu endpoint
+// 0. Dynamic Google Sheet Menu endpoint & IPv4-first resilient fetcher
 const GOOGLE_SHEET_MENU_URL = 'https://docs.google.com/spreadsheets/d/1qVLdRKkLlQHDKtC7iZr4O1E-wSpNAjXzEssM-Zsb4og/gviz/tq?tqx=out:json&sheet=Menudata';
 const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHl-grnqg64pbYukq0WnDK73opMdgZ8n1WP7bxcdx7xO0NXJBw7jJPSX_aEnQtfFGLqA/exec';
+const SHEET_MENU_CACHE_FILE = path.join(process.cwd(), '.sheet-menu-cache.txt');
+
+let cachedSheetMenuRawText: string = (() => {
+  try {
+    if (fs.existsSync(SHEET_MENU_CACHE_FILE)) {
+      return fs.readFileSync(SHEET_MENU_CACHE_FILE, 'utf-8');
+    }
+  } catch {
+    // ignore
+  }
+  return '';
+})();
+
+function saveSheetMenuCache(rawText: string): void {
+  cachedSheetMenuRawText = rawText;
+  try {
+    fs.writeFileSync(SHEET_MENU_CACHE_FILE, rawText, 'utf-8');
+  } catch {
+    // ignore disk cache write errors
+  }
+}
+
+function httpsRequestIpv4(
+  targetUrl: string,
+  options: { method?: string; headers?: Record<string, string>; body?: string; timeoutMs?: number },
+  redirectsLeft = 5
+): Promise<{ status: number; ok: boolean; text: string }> {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(targetUrl);
+    const req = https.request(
+      {
+        protocol: parsed.protocol,
+        hostname: parsed.hostname,
+        port: parsed.port || 443,
+        path: `${parsed.pathname}${parsed.search}`,
+        method: options.method || 'GET',
+        headers: options.headers || {},
+        family: 4,
+        timeout: options.timeoutMs ?? 15000,
+      },
+      (res) => {
+        const status = res.statusCode || 0;
+        const location = res.headers.location;
+        if (location && [301, 302, 303, 307, 308].includes(status) && redirectsLeft > 0) {
+          res.resume();
+          const nextUrl = new URL(location, targetUrl).toString();
+          const nextMethod = status === 303 || status === 302 || status === 301 ? 'GET' : options.method;
+          httpsRequestIpv4(
+            nextUrl,
+            {
+              method: nextMethod,
+              headers: nextMethod === 'GET' ? {} : options.headers,
+              body: nextMethod === 'GET' ? undefined : options.body,
+              timeoutMs: options.timeoutMs,
+            },
+            redirectsLeft - 1
+          )
+            .then(resolve)
+            .catch(reject);
+          return;
+        }
+
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+        res.on('end', () => {
+          const text = Buffer.concat(chunks).toString('utf-8');
+          resolve({ status, ok: status >= 200 && status < 300, text });
+        });
+      }
+    );
+
+    req.on('timeout', () => {
+      req.destroy(new Error(`IPv4 HTTPS request timed out after ${options.timeoutMs ?? 15000}ms`));
+    });
+    req.on('error', reject);
+
+    if (options.body) {
+      req.write(options.body);
+    }
+    req.end();
+  });
+}
+
+async function fetchTextWithIpv4Fallback(
+  url: string,
+  options: { method?: string; headers?: Record<string, string>; body?: string; timeoutMs?: number } = {}
+): Promise<{ status: number; ok: boolean; text: string }> {
+  const timeoutMs = options.timeoutMs ?? 15000;
+  try {
+    const response = await fetch(url, {
+      method: options.method || 'GET',
+      headers: options.headers,
+      body: options.body,
+      redirect: 'follow',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const text = await response.text();
+    return { status: response.status, ok: response.ok, text };
+  } catch (fetchErr) {
+    // Fallback to explicit IPv4 socket request if undici Happy Eyeballs/IPv6 stalled
+    return await httpsRequestIpv4(url, { ...options, timeoutMs });
+  }
+}
 
 // 0a. Dynamic Google Sheet Menu endpoint (GViz)
 app.get('/api/menu', async (req, res) => {
   try {
-    const response = await fetch(GOOGLE_SHEET_MENU_URL);
-    if (!response.ok) {
-      throw new Error(`Google Sheets responded with status ${response.status}`);
+    const result = await fetchTextWithIpv4Fallback(GOOGLE_SHEET_MENU_URL, { timeoutMs: 15000 });
+    if (!result.ok) {
+      throw new Error(`Google Sheets responded with status ${result.status}`);
     }
-    const rawText = await response.text();
+    if (result.text && result.text.includes('table')) {
+      saveSheetMenuCache(result.text);
+    }
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.send(rawText);
+    res.send(result.text);
   } catch (err: any) {
-    console.error('Error fetching Google Sheet menu:', err);
-    res.status(500).json({ error: err.message || 'Failed to fetch menu from Google Sheets' });
+    if (cachedSheetMenuRawText) {
+      console.warn('[Menu Proxy] Live Google Sheet timeout/error, serving cached menu:', err?.message || err);
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('X-Menu-Cache', 'fallback');
+      return res.send(cachedSheetMenuRawText);
+    }
+    console.warn('[Menu Proxy] Google Sheet menu unavailable:', err?.message || err);
+    res.status(503).json({ error: err?.message || 'Google Sheet temporarily unreachable' });
   }
 });
 
 // 0b. Google Apps Script Live Menu & Stock endpoint
 app.get('/api/apps-script/menu', async (req, res) => {
   try {
-    const response = await fetch(GOOGLE_APPS_SCRIPT_URL);
-    if (!response.ok) {
-      throw new Error(`Apps Script responded with status ${response.status}`);
+    const result = await fetchTextWithIpv4Fallback(GOOGLE_APPS_SCRIPT_URL, { timeoutMs: 15000 });
+    if (!result.ok) {
+      throw new Error(`Apps Script responded with status ${result.status}`);
     }
-    const data = await response.json();
+    const data = JSON.parse(result.text);
     res.json(data);
   } catch (err: any) {
-    console.error('Error fetching Apps Script menu:', err);
-    res.status(500).json({ error: err.message || 'Failed to fetch items from Apps Script' });
+    console.warn('[AppsScript Menu] Temporarily unavailable:', err?.message || err);
+    res.status(503).json({ error: err?.message || 'Apps Script temporarily unreachable' });
   }
 });
 
-// 0c. Sync Order to Google Sheet (Deduct stock and add order amount in Excel/Sheet)
+// 0c. Sync Order to Google Sheet (Deduct stock, update U/V/W customer/item/price and persist locally for Admin Panel)
 app.post('/api/sync-sheet-order', async (req, res) => {
   try {
     const orderData = req.body;
-    console.log('[AppsScript Sync] Syncing order to Google Sheet:', orderData?.bill_no || orderData?.order_id);
+    const orderId = String(orderData?.bill_no || orderData?.order_id || `FFC-${Date.now()}`);
+    console.log('[AppsScript Sync] Syncing order to Google Sheet:', orderId);
 
-    const scriptResponse = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+    // Record order in Cafe Orders Admin DB (deduped by orderId)
+    const existingIdx = cafeOrdersList.findIndex((o) => o.orderId === orderId);
+    const createdAt = orderData?.timestamp || new Date().toISOString();
+    const mappedItems = Array.isArray(orderData?.items)
+      ? orderData.items.map((it: any) => ({
+          name: String(it.item_name || it.name || 'Item'),
+          variant: it.variant ? String(it.variant) : 'Standard',
+          qty: Number(it.qty) || 1,
+          price: Number(it.price) || 0,
+          total: Number(it.total ?? (Number(it.price) || 0) * (Number(it.qty) || 1)),
+        }))
+      : [];
+
+    const itemSummary =
+      String(orderData?.itemname || '').trim() ||
+      mappedItems
+        .map((it: any) =>
+          it.variant && it.variant !== 'Standard'
+            ? `${it.name} (${it.variant}) x ${it.qty}`
+            : `${it.name} x ${it.qty}`
+        )
+        .join(', ');
+
+    const existingOrder = existingIdx !== -1 ? cafeOrdersList[existingIdx] : undefined;
+    const newCafeOrder: ServerCafeOrder = {
+      orderId,
+      userId: orderData?.user_id
+        ? String(orderData.user_id).trim()
+        : existingOrder?.userId || '',
+      firebaseUid: orderData?.firebase_uid
+        ? String(orderData.firebase_uid).trim()
+        : existingOrder?.firebaseUid || '',
+      customerEmail: orderData?.customer_email
+        ? String(orderData.customer_email).trim().toLowerCase()
+        : existingOrder?.customerEmail || '',
+      customerName: String(orderData?.customer_name || orderData?.coustomer_name || 'Guest'),
+      customerPhone: String(orderData?.customer_phone || ''),
+      orderType:
+        orderData?.order_type === 'delivery' || orderData?.order_type === 'takeaway'
+          ? orderData.order_type
+          : 'dine-in',
+      tableOrAddress: String(orderData?.table_or_address || ''),
+      items: mappedItems,
+      itemSummary,
+      subtotal: Number(orderData?.subtotal ?? orderData?.grandtotal ?? 0),
+      deliveryFee: Number(orderData?.delivery_fee ?? 0),
+      grandTotal: Number(orderData?.grandtotal ?? 0),
+      status: existingOrder ? existingOrder.status : 'pending',
+      createdAt,
+      dateKey: getLocalDateKey(createdAt),
+      notes: orderData?.notes ? String(orderData.notes) : '',
+    };
+
+    if (existingIdx === -1) {
+      cafeOrdersList.unshift(newCafeOrder);
+    } else {
+      cafeOrdersList[existingIdx] = { ...cafeOrdersList[existingIdx], ...newCafeOrder };
+    }
+    saveCafeOrdersToDisk(cafeOrdersList);
+
+    const scriptResponse = await fetchTextWithIpv4Fallback(GOOGLE_APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(orderData)
+      body: JSON.stringify(orderData),
+      timeoutMs: 15000,
     });
 
-    const result = await scriptResponse.json();
+    const rawText = scriptResponse.text;
+    let result: any = {};
+    try {
+      result = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      result = { status: scriptResponse.ok ? 'success' : 'error', raw: rawText };
+    }
+
     console.log('[AppsScript Sync] Response:', result);
     res.json({
       status: result.status || 'success',
       message: result.message || 'Data saved, stock deducted and all columns updated successfully',
-      data: result
+      data: result,
+      order: newCafeOrder,
     });
   } catch (err: any) {
-    console.error('Error syncing order to Google Apps Script:', err);
-    res.status(500).json({
-      status: 'error',
-      error: err.message || 'Failed to sync with Google Sheet'
+    console.warn('[AppsScript Sync] Google Sheet sync timed out/failed (order already saved locally):', err?.message || err);
+    res.status(200).json({
+      status: 'partial',
+      message: 'Order saved locally; Google Sheet sync will retry later.',
+      error: err?.message || 'Google Sheet sync timed out',
     });
+  }
+});
+
+// 0d. Admin Panel & Customer Profile: Get Cafe Orders (scoped to profile when userId/email query provided)
+app.get('/api/cafe-orders', (req, res) => {
+  try {
+    const queryUserId = typeof req.query.userId === 'string' ? req.query.userId.trim() : '';
+    const queryEmail = typeof req.query.email === 'string' ? req.query.email.trim().toLowerCase() : '';
+    const queryPhone = typeof req.query.phone === 'string' ? extractIndianTenDigitsServer(req.query.phone) : '';
+    const queryName = typeof req.query.name === 'string' ? req.query.name.trim().toLowerCase() : '';
+
+    if (queryUserId || queryEmail) {
+      const scopedOrders = cafeOrdersList.filter((o) => {
+        const orderEmail = (o.customerEmail || '').trim().toLowerCase();
+        const orderUserId = (o.userId || '').trim();
+        if (orderUserId || orderEmail) {
+          if (queryUserId && orderUserId && orderUserId === queryUserId) return true;
+          if (queryEmail && orderEmail && orderEmail === queryEmail) return true;
+          return false;
+        }
+        // Legacy orders without userId/customerEmail: require BOTH phone and exact name match
+        const orderPhone = extractIndianTenDigitsServer(o.customerPhone || '');
+        const orderName = (o.customerName || '').trim().toLowerCase();
+        return Boolean(queryPhone && orderPhone === queryPhone && queryName && orderName === queryName);
+      });
+      return res.json({ orders: scopedOrders });
+    }
+
+    res.json({ orders: cafeOrdersList });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to load cafe orders' });
+  }
+});
+
+// 0e. Admin Panel: Update Cafe Order Status (pending | confirmed)
+app.patch('/api/cafe-orders/:orderId/status', (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body || {};
+    if (status !== 'pending' && status !== 'confirmed') {
+      return res.status(400).json({ error: 'Invalid status. Must be pending or confirmed.' });
+    }
+
+    const idx = cafeOrdersList.findIndex((o) => o.orderId === orderId);
+    if (idx === -1) {
+      return res.status(404).json({ error: 'Order not found.' });
+    }
+
+    cafeOrdersList[idx].status = status;
+    saveCafeOrdersToDisk(cafeOrdersList);
+    res.json({ success: true, order: cafeOrdersList[idx] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to update cafe order status' });
+  }
+});
+
+// 0f. Admin Panel: Delete single Cafe Order from storage
+app.delete('/api/cafe-orders/:orderId', (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const beforeCount = cafeOrdersList.length;
+    cafeOrdersList = cafeOrdersList.filter((o) => o.orderId !== orderId);
+    const deleted = cafeOrdersList.length < beforeCount;
+    if (deleted) {
+      saveCafeOrdersToDisk(cafeOrdersList);
+    }
+    res.json({ success: true, deleted, remainingCount: cafeOrdersList.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to delete cafe order' });
+  }
+});
+
+// 0g. Admin Panel: Clear Cafe Orders storage (all orders or specific dateKey)
+app.delete('/api/cafe-orders', (req, res) => {
+  try {
+    const dateKey = typeof req.query.dateKey === 'string' ? req.query.dateKey.trim() : '';
+    const beforeCount = cafeOrdersList.length;
+    if (dateKey) {
+      cafeOrdersList = cafeOrdersList.filter((o) => o.dateKey !== dateKey);
+    } else {
+      cafeOrdersList = [];
+    }
+    saveCafeOrdersToDisk(cafeOrdersList);
+    res.json({
+      success: true,
+      deletedCount: beforeCount - cafeOrdersList.length,
+      remainingCount: cafeOrdersList.length,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to clear cafe orders storage' });
   }
 });
 

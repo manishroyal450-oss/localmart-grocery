@@ -3,7 +3,6 @@ import { MenuItem, CafeCartItem, DeliveryInfo } from './types';
 import { fetchMenuData, getCategoryIcon, sortCustomCategories } from './services/menuService';
 import { ZomatoHeader, GOOGLE_MAPS_URL, CAFE_FULL_ADDRESS } from './components/ZomatoHeader';
 import ZomatoBanner from './components/ZomatoBanner';
-import DownloadAppBanner from './components/DownloadAppBanner';
 import CircularCategoryBar from './components/CircularCategoryBar';
 import HorizontalDishesRow from './components/HorizontalDishesRow';
 import ZomatoDishCard from './components/ZomatoDishCard';
@@ -13,6 +12,7 @@ import VideoModal from './components/VideoModal';
 import ImagePreviewModal from './components/ImagePreviewModal';
 import ProfileModal from './components/ProfileModal';
 import CafeCartDrawer from './components/CafeCartDrawer';
+import CafeAdminPanel from './components/CafeAdminPanel';
 import CafeNavigationBar from './components/CafeNavigationBar';
 import CafeFooter from './components/CafeFooter';
 import CartToast, { ToastPayload } from './components/CartToast';
@@ -26,8 +26,7 @@ import {
   getCartItemId,
 } from './services/cartService';
 import { UserProfile, getCurrentUser } from './services/authService';
-import { SearchX, ArrowUp, Sparkles, Play, Flame, Zap, CheckCircle2, MapPin, MessageCircle, FileSpreadsheet } from 'lucide-react';
-import { LiquidButton } from '@/components/ui/liquid-glass-button';
+import { SearchX, ArrowUp, Play, Flame, Zap, CheckCircle2, LayoutGrid } from 'lucide-react';
 import {
   syncOrderToGoogleSheet,
   buildWhatsAppOrderMessage,
@@ -45,6 +44,7 @@ export const App: React.FC = () => {
   // User Profile & Authentication State
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => getCurrentUser());
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
+  const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
 
   // Cart State & Cart Drawer
   const [cartItems, setCartItems] = useState<CafeCartItem[]>(() => loadCartFromStorage());
@@ -320,6 +320,11 @@ export const App: React.FC = () => {
 
   const handleQuickWhatsAppOrder = useCallback(async () => {
     if (cartItems.length === 0) return;
+    if (!currentUser) {
+      setActiveNavTab('profile');
+      setIsProfileOpen(true);
+      return;
+    }
     setIsQuickOrdering(true);
 
     const orderId = `FFC-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -330,6 +335,8 @@ export const App: React.FC = () => {
     // 1. Prepare Google Sheet stock deduction & amount addition payload
     const sheetPayload = {
       bill_no: orderId,
+      user_id: currentUser.id,
+      customer_email: currentUser.email,
       customer_name: custName,
       customer_phone: custPhone,
       table_or_address: custAddress,
@@ -440,6 +447,14 @@ export const App: React.FC = () => {
     setSearchQuery('');
   }, []);
 
+  const handleOpenAdmin = useCallback(() => {
+    setIsAdminOpen(true);
+  }, []);
+
+  const handleCloseAdmin = useCallback(() => {
+    setIsAdminOpen(false);
+  }, []);
+
   // Mobile Back Button (Hardware / Popstate) & Edge Gesture Handling
   const { triggerMobileBack, handleModalCloseWithHistory } = useMobileBackHandler({
     isCartOpen,
@@ -450,6 +465,8 @@ export const App: React.FC = () => {
     onClosePreview: handleClosePreview,
     isProfileOpen,
     onCloseProfile: handleCloseProfile,
+    isAdminOpen,
+    onCloseAdmin: handleCloseAdmin,
     selectedCategory,
     onResetCategory: handleResetCategory,
     searchQuery,
@@ -457,24 +474,22 @@ export const App: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 selection:bg-rose-100 dark:selection:bg-rose-900/40 selection:text-rose-900 dark:selection:text-rose-200 overflow-x-hidden w-full max-w-full pb-18 sm:pb-12 transition-colors duration-200">
-      {/* 1. Zomato Top Header (Brand, Location, Search Bar, Dark/Light Mode, Profile) */}
+    <div className="min-h-screen flex flex-col bg-[#faf9f6] text-stone-900 selection:bg-rose-100 selection:text-rose-900 overflow-x-hidden w-full max-w-full pb-20 sm:pb-16">
+      {/* Top Header (Brand, Maps Link, Admin, Profile, Search Bar) */}
       <ZomatoHeader
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         currentUser={currentUser}
         onOpenProfile={handleOpenProfile}
+        onOpenAdmin={handleOpenAdmin}
         onGoHome={handleGoHome}
         onOpenCart={handleOpenCart}
         cartCount={cartCount}
         activeTab={activeNavTab}
       />
 
-      {/* Download App Action Bar / Button (Between Search Bar & Banner) */}
-      <DownloadAppBanner />
-
-      {/* 2. Zomato Banner (Promotional Gold / Cafe Delights Banner) */}
-      <div className="max-w-7xl mx-auto w-full px-3.5 sm:px-6 overflow-hidden">
+      {/* Editorial Cafe Hero Banner */}
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 overflow-hidden">
         <ZomatoBanner />
       </div>
 
@@ -490,63 +505,71 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* 4. Quick Filter Chips with Liquid Glass Buttons */}
+      {/* Quick Filter Toolbar */}
       {!loading && !error && items.length > 0 && (
-        <div className="max-w-7xl mx-auto w-full px-3.5 sm:px-6 mt-3 overflow-hidden">
-          <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-2 px-1 w-full min-w-0">
-            <LiquidButton
-              variant="default"
-              size="pill"
-              isActive={activeFilter === 'all'}
+        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 mt-3 overflow-hidden">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1.5 w-full min-w-0">
+            <button
+              type="button"
               onClick={() => setActiveFilter('all')}
-              className="flex-shrink-0"
+              className={`min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95 border ${
+                activeFilter === 'all'
+                  ? 'bg-stone-900 text-white border-stone-900 shadow-xs'
+                  : 'bg-white text-stone-700 border-stone-200 hover:border-stone-300 hover:text-stone-900'
+              }`}
               title="Show all items"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <LayoutGrid className="w-3.5 h-3.5" />
               <span>All Items</span>
-            </LiquidButton>
+            </button>
 
-            <LiquidButton
-              variant="rose"
-              size="pill"
-              isActive={activeFilter === 'reels'}
+            <button
+              type="button"
               onClick={() => setActiveFilter('reels')}
-              className="flex-shrink-0"
+              className={`min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95 border ${
+                activeFilter === 'reels'
+                  ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                  : 'bg-white text-stone-700 border-stone-200 hover:border-rose-300 hover:text-rose-600'
+              }`}
               title="Filter items with video reels"
             >
-              <Play className={`w-3.5 h-3.5 fill-current ${activeFilter === 'reels' ? 'text-white' : 'text-rose-500'}`} />
+              <Play className={`w-3.5 h-3.5 ${activeFilter === 'reels' ? 'fill-white text-white' : 'fill-rose-600 text-rose-600'}`} />
               <span>With Videos</span>
-            </LiquidButton>
+            </button>
 
-            <LiquidButton
-              variant="amber"
-              size="pill"
-              isActive={activeFilter === 'popular'}
+            <button
+              type="button"
               onClick={() => setActiveFilter('popular')}
-              className="flex-shrink-0"
+              className={`min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95 border ${
+                activeFilter === 'popular'
+                  ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                  : 'bg-white text-stone-700 border-stone-200 hover:border-amber-300 hover:text-amber-700'
+              }`}
               title="Chef's top recommended popular dishes"
             >
-              <Flame className={`w-3.5 h-3.5 fill-current ${activeFilter === 'popular' ? 'text-white' : 'text-amber-500'}`} />
+              <Flame className={`w-3.5 h-3.5 ${activeFilter === 'popular' ? 'fill-white text-white' : 'text-amber-600'}`} />
               <span>Chef's Choice</span>
-            </LiquidButton>
+            </button>
 
-            <LiquidButton
-              variant="emerald"
-              size="pill"
-              isActive={activeFilter === 'fast'}
+            <button
+              type="button"
               onClick={() => setActiveFilter('fast')}
-              className="flex-shrink-0"
+              className={`min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95 border ${
+                activeFilter === 'fast'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                  : 'bg-white text-stone-700 border-stone-200 hover:border-emerald-300 hover:text-emerald-700'
+              }`}
               title="Fast preparation dishes"
             >
-              <Zap className={`w-3.5 h-3.5 fill-current ${activeFilter === 'fast' ? 'text-white' : 'text-emerald-500'}`} />
+              <Zap className={`w-3.5 h-3.5 ${activeFilter === 'fast' ? 'fill-white text-white' : 'text-emerald-600'}`} />
               <span>Near & Fast</span>
-            </LiquidButton>
+            </button>
           </div>
         </div>
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-3.5 sm:px-6 py-4">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-4">
         {/* Loading Skeleton */}
         {loading && <MenuSkeleton />}
 
@@ -559,11 +582,11 @@ export const App: React.FC = () => {
           />
         )}
 
-        {/* 5. SIDE SCROLL (HORIZONTAL SCROLL): RECOMMENDED FOR YOU */}
+        {/* Recommended Horizontal Showcase */}
         {!loading && !error && !searchQuery && selectedCategory === 'All' && activeFilter === 'all' && spotlightItems.length > 0 && (
           <HorizontalDishesRow
             title="Recommended For You"
-            subtitle="Exclusive deals, offers & dishes with video reels"
+            subtitle="Chef specials, offers & dishes with video reels"
             items={spotlightItems}
             onOpenVideo={handleOpenVideo}
             onPreviewImage={(url, name) => setPreviewModal({ isOpen: true, url, name })}
@@ -575,14 +598,14 @@ export const App: React.FC = () => {
 
         {/* Empty State */}
         {!loading && !error && filteredItems.length === 0 && (
-          <div className="text-center py-16 px-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl max-w-md mx-auto shadow-xs my-8 transition-colors">
-            <div className="w-16 h-16 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto mb-4">
-              <SearchX className="w-8 h-8" />
+          <div className="text-center py-16 px-4 bg-white border border-stone-200 rounded-2xl max-w-md mx-auto shadow-2xs my-8">
+            <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
+              <SearchX className="w-7 h-7" />
             </div>
-            <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-1">
+            <h3 className="text-lg font-bold text-stone-900 mb-1">
               No Dishes Found
             </h3>
-            <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mb-6 leading-relaxed">
+            <p className="text-xs sm:text-sm text-stone-500 mb-6 leading-relaxed">
               We couldn't find any dishes matching your selection. Try clearing your search or filter.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
@@ -590,7 +613,7 @@ export const App: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="px-4 py-2 rounded-xl bg-rose-600 text-white font-bold text-xs shadow-xs hover:bg-rose-700 transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold text-xs hover:bg-rose-700 transition-colors cursor-pointer"
                 >
                   Clear Search
                 </button>
@@ -599,7 +622,7 @@ export const App: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedCategory('All')}
-                  className="px-4 py-2 rounded-xl bg-stone-900 dark:bg-stone-800 text-white font-bold text-xs shadow-xs hover:bg-stone-800 dark:hover:bg-stone-700 transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-stone-900 text-white font-semibold text-xs hover:bg-stone-800 transition-colors cursor-pointer"
                 >
                   Show All Categories
                 </button>
@@ -608,21 +631,17 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* 6. VERTICAL SCROLL: DISHES FEED (By Category or Filtered Grid) */}
+        {/* Categorized Menu Feed or Filtered Grid */}
         {!loading && !error && filteredItems.length > 0 && (
-          <div className="my-6">
-            {/* If All Categories are selected & no active search/chip: Display categorized vertical sections */}
+          <div className="my-5">
             {groupedItems ? (
-              <div className="space-y-12">
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-stone-200 dark:border-stone-800">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-stone-900 dark:bg-rose-500"></span>
-                    <h2 className="text-base sm:text-lg font-black uppercase tracking-tight text-stone-900 dark:text-white">
-                      Explore Full Menu
-                    </h2>
-                  </div>
-                  <span className="text-xs text-stone-400 font-semibold">
-                    Scroll down for all categories
+              <div className="space-y-10">
+                <div className="flex items-baseline justify-between pb-2.5 border-b border-stone-200">
+                  <h2 className="text-lg sm:text-xl font-bold font-display text-stone-900">
+                    Explore Full Menu
+                  </h2>
+                  <span className="text-xs text-stone-500 font-medium tabular-nums">
+                    {filteredItems.length} dishes · {groupedItems.length} categories
                   </span>
                 </div>
 
@@ -632,20 +651,20 @@ export const App: React.FC = () => {
                     <section
                       key={group.category}
                       id={`section-${group.category.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
-                      className="scroll-mt-24"
+                      className="scroll-mt-28"
                     >
                       {/* Section Header */}
-                      <div className="flex items-center justify-between pb-2 mb-4 border-b border-stone-200/90 dark:border-stone-800">
+                      <div className="flex items-center justify-between pb-3 mb-4 border-b border-stone-200/80">
                         <div className="flex items-center gap-2.5">
-                          <span className="text-xl p-1 rounded-lg bg-stone-100 dark:bg-stone-850 border border-stone-200 dark:border-stone-750">
+                          <span className="text-lg w-9 h-9 rounded-xl bg-white border border-stone-200 flex items-center justify-center shadow-2xs">
                             {icon}
                           </span>
                           <div>
-                            <h3 className="text-lg sm:text-xl font-black text-stone-900 dark:text-white font-display">
+                            <h3 className="text-lg sm:text-xl font-bold text-stone-900 font-display leading-tight">
                               {group.category}
                             </h3>
-                            <p className="text-xs text-stone-500 dark:text-stone-400 font-medium">
-                              Fresh cafe delicacies
+                            <p className="text-xs text-stone-500 font-medium tabular-nums">
+                              {group.items.length} {group.items.length === 1 ? 'dish' : 'dishes'} · Freshly prepared
                             </p>
                           </div>
                         </div>
@@ -653,13 +672,13 @@ export const App: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setSelectedCategory(group.category)}
-                          className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/80 px-3 py-1 rounded-full transition-colors cursor-pointer"
+                          className="text-xs font-semibold text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-stone-200 hover:border-rose-200 px-3 py-1.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap shrink-0"
                         >
-                          View Only {group.category}
+                          View {group.category}
                         </button>
                       </div>
 
-                      {/* Items Grid (Vertically Scrolling) */}
+                      {/* Items Grid */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
                         {group.items.map((item) => (
                           <ZomatoDishCard
@@ -681,29 +700,33 @@ export const App: React.FC = () => {
                 })}
               </div>
             ) : (
-              /* Flat Grid when filtered by category, search, or chip */
               <div>
-                <div className="flex items-center justify-between mb-5 pb-3 border-b border-stone-200 dark:border-stone-800">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">
+                <div className="flex items-center justify-between mb-5 pb-3 border-b border-stone-200">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xl w-9 h-9 rounded-xl bg-white border border-stone-200 flex items-center justify-center shadow-2xs">
                       {getCategoryIcon(selectedCategory)}
                     </span>
-                    <h2 className="text-xl sm:text-2xl font-black text-stone-900 dark:text-white font-display">
-                      {selectedCategory === 'All'
-                        ? searchQuery
-                          ? `Results for "${searchQuery}"`
-                          : 'Special Filtered Dishes'
-                        : selectedCategory}
-                    </h2>
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-stone-900 font-display leading-tight">
+                        {selectedCategory === 'All'
+                          ? searchQuery
+                            ? `Results for "${searchQuery}"`
+                            : 'Filtered Dishes'
+                          : selectedCategory}
+                      </h2>
+                      <p className="text-xs text-stone-500 font-medium tabular-nums">
+                        {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'} available
+                      </p>
+                    </div>
                   </div>
 
                   {selectedCategory !== 'All' && (
                     <button
                       type="button"
                       onClick={() => setSelectedCategory('All')}
-                      className="text-xs font-bold text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white bg-white dark:bg-stone-850 border border-stone-200 dark:border-stone-750 px-3 py-1 rounded-full transition-all cursor-pointer shadow-2xs"
+                      className="text-xs font-semibold text-stone-700 hover:text-stone-900 bg-white border border-stone-200 hover:border-stone-300 px-3.5 py-1.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     >
-                      Show All Categories
+                      All Categories
                     </button>
                   )}
                 </div>
@@ -735,6 +758,7 @@ export const App: React.FC = () => {
       <CafeFooter
         onCategorySelect={(cat) => setSelectedCategory(cat)}
         onOpenCart={handleOpenCart}
+        onOpenAdmin={handleOpenAdmin}
       />
 
       {/* Floating Back to Top Button */}
@@ -801,6 +825,7 @@ export const App: React.FC = () => {
         onClose={() => setCartToast(null)}
         onOpenCart={handleOpenCart}
         onWhatsAppOrder={handleQuickWhatsAppOrder}
+        isWhatsAppDisabled={!currentUser}
       />
 
       {/* Video / Reel Player Modal */}
@@ -832,6 +857,12 @@ export const App: React.FC = () => {
             }, 700);
           }
         }}
+      />
+
+      {/* Cafe Admin Panel (Daily Selling Orders, Grand Total & Confirmation/Pending Status) */}
+      <CafeAdminPanel
+        isOpen={isAdminOpen}
+        onClose={() => handleModalCloseWithHistory(handleCloseAdmin)}
       />
 
       {/* Mobile-Friendly Edge Swipe Back Gesture Detector */}

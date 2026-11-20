@@ -1,0 +1,241 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Pillar 4.1: Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ==================== GLOBAL PRIMITIVES ====================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerified() && request.auth.token.email == 'manishroyal450@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // ==================== ENTITY VALIDATION BLUEPRINTS ====================
+    function isValidUserPublic(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'pinCode', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'pinCode', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == request.auth.uid
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100
+        && data.pinCode is string && data.pinCode.size() == 6 && data.pinCode.matches('^246725$')
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivateContact(data) {
+      return data.keys().hasAll(['uid', 'email', 'contactNumber', 'address', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'contactNumber', 'address', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == request.auth.uid
+        && data.email is string && data.email.size() >= 11 && data.email.size() <= 150
+        && data.email.matches('^[a-zA-Z0-9._%+-]+@gmail\\.com$')
+        && data.contactNumber is string && data.contactNumber.size() == 14
+        && data.contactNumber.matches('^\\+91 [0-9]{10}$')
+        && data.address is string && data.address.size() >= 1 && data.address.size() <= 400
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidOrderItem(item) {
+      return item is map
+        && item.keys().hasAll(['name', 'qty', 'price', 'total'])
+        && item.keys().hasOnly(['name', 'variant', 'qty', 'price', 'total'])
+        && item.name is string && item.name.size() >= 1 && item.name.size() <= 150
+        && (!('variant' in item) || (item.variant is string && item.variant.size() <= 60))
+        && item.qty is number && item.qty >= 1 && item.qty <= 100
+        && item.price is number && item.price >= 0 && item.price <= 100000
+        && item.total is number && item.total >= 0 && item.total <= 1000000;
+    }
+
+    function isValidCafeOrder(data) {
+      return data.keys().hasAll([
+          'orderId',
+          'firebaseUid',
+          'profileId',
+          'customerEmail',
+          'customerName',
+          'customerPhone',
+          'orderType',
+          'tableOrAddress',
+          'items',
+          'itemSummary',
+          'subtotal',
+          'deliveryFee',
+          'grandTotal',
+          'status',
+          'dateKey',
+          'notes',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'orderId',
+          'firebaseUid',
+          'profileId',
+          'customerEmail',
+          'customerName',
+          'customerPhone',
+          'orderType',
+          'tableOrAddress',
+          'items',
+          'itemSummary',
+          'subtotal',
+          'deliveryFee',
+          'grandTotal',
+          'status',
+          'dateKey',
+          'notes',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.orderId is string && data.orderId.size() >= 3 && data.orderId.size() <= 64
+        && data.orderId.matches('^[a-zA-Z0-9_\\-]+$')
+        && isValidId(data.firebaseUid)
+        && data.profileId is string && data.profileId.size() <= 128
+        && data.customerEmail is string && data.customerEmail.size() >= 11 && data.customerEmail.size() <= 150
+        && data.customerEmail.matches('^[a-zA-Z0-9._%+-]+@gmail\\.com$')
+        && data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 100
+        && data.customerPhone is string && data.customerPhone.size() == 14
+        && data.customerPhone.matches('^\\+91 [0-9]{10}$')
+        && data.orderType in ['delivery', 'dine-in', 'takeaway']
+        && data.tableOrAddress is string && data.tableOrAddress.size() <= 400
+        && data.items is list && data.items.size() >= 1 && data.items.size() <= 50
+        && isValidOrderItem(data.items[0])
+        && data.itemSummary is string && data.itemSummary.size() >= 1 && data.itemSummary.size() <= 1000
+        && data.subtotal is number && data.subtotal >= 0 && data.subtotal <= 1000000
+        && data.deliveryFee is number && data.deliveryFee >= 0 && data.deliveryFee <= 50000
+        && data.grandTotal is number && data.grandTotal >= 0 && data.grandTotal <= 1050000
+        && data.status in ['pending', 'confirmed']
+        && data.dateKey is string && data.dateKey.size() == 10 && data.dateKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.notes is string && data.notes.size() <= 300
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // ==================== COLLECTION RULES ====================
+
+    // Customer Public Summary (Non-PII)
+    match /users/{userId} {
+      allow get: if isVerified() && isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if false;
+      allow create: if isVerified()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserPublic(incoming())
+        && incoming().uid == userId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerified()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserPublic(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt'])
+        && incoming().uid == existing().uid
+        && incoming().pinCode == existing().pinCode
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
+
+      // Pillar 6: Isolated Customer PII subcollection with Master Gate parent check
+      match /private/{docId} {
+        allow get: if isVerified()
+          && isValidId(userId)
+          && isValidId(docId)
+          && docId == 'contact'
+          && (isOwner(userId) || isAdmin())
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow list: if false;
+        allow create: if isVerified()
+          && isValidId(userId)
+          && isValidId(docId)
+          && docId == 'contact'
+          && isOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && get(/databases/$(database)/documents/users/$(userId)).data.uid == request.auth.uid
+          && isValidUserPrivateContact(incoming())
+          && incoming().uid == userId
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isVerified()
+          && isValidId(userId)
+          && isValidId(docId)
+          && docId == 'contact'
+          && isOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && get(/databases/$(database)/documents/users/$(userId)).data.uid == request.auth.uid
+          && isValidUserPrivateContact(incoming())
+          && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'contactNumber', 'address', 'updatedAt'])
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time;
+        allow delete: if false;
+      }
+    }
+
+    // Cafe Orders (Profile-Scoped Customer Reads + Admin Full Read & Status Toggle)
+    match /cafeOrders/{orderId} {
+      allow get: if isVerified()
+        && isValidId(orderId)
+        && (existing().firebaseUid == request.auth.uid || isAdmin());
+      allow list: if isVerified()
+        && (existing().firebaseUid == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isVerified()
+        && isValidId(orderId)
+        && isValidCafeOrder(incoming())
+        && incoming().orderId == orderId
+        && incoming().firebaseUid == request.auth.uid
+        && incoming().status == 'pending'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerified()
+        && isValidId(orderId)
+        && isValidCafeOrder(incoming())
+        && isAdmin()
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && incoming().firebaseUid == existing().firebaseUid
+        && incoming().orderId == existing().orderId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isVerified() && isValidId(orderId) && isAdmin();
+    }
+
+    // Admin Allowlist (Read own record only; writes locked)
+    match /admins/{adminId} {
+      allow get: if isVerified() && isValidId(adminId) && isOwner(adminId);
+      allow list: if false;
+      allow write: if false;
+    }
+  }
+}

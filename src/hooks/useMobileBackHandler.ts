@@ -9,6 +9,8 @@ export interface MobileBackHandlerConfig {
   onClosePreview: () => void;
   isProfileOpen: boolean;
   onCloseProfile: () => void;
+  isAdminOpen?: boolean;
+  onCloseAdmin?: () => void;
   selectedCategory: string;
   onResetCategory: () => void;
   searchQuery: string;
@@ -24,6 +26,8 @@ export function useMobileBackHandler({
   onClosePreview,
   isProfileOpen,
   onCloseProfile,
+  isAdminOpen = false,
+  onCloseAdmin,
   selectedCategory,
   onResetCategory,
   searchQuery,
@@ -39,6 +43,7 @@ export function useMobileBackHandler({
   else if (isVideoOpen) currentActiveModal = 'video';
   else if (isCartOpen) currentActiveModal = 'cart';
   else if (isProfileOpen) currentActiveModal = 'profile';
+  else if (isAdminOpen) currentActiveModal = 'admin';
 
   // Push history state whenever a modal opens
   useEffect(() => {
@@ -77,6 +82,8 @@ export function useMobileBackHandler({
         onCloseCart();
       } else if (isProfileOpen) {
         onCloseProfile();
+      } else if (isAdminOpen && onCloseAdmin) {
+        onCloseAdmin();
       } else if (selectedCategory !== 'All' || searchQuery.trim().length > 0) {
         // Return to Home All view
         if (searchQuery.trim().length > 0) onClearSearch();
@@ -97,6 +104,8 @@ export function useMobileBackHandler({
     onCloseCart,
     isProfileOpen,
     onCloseProfile,
+    isAdminOpen,
+    onCloseAdmin,
     selectedCategory,
     onResetCategory,
     searchQuery,
@@ -130,6 +139,10 @@ export function useMobileBackHandler({
       handleModalCloseWithHistory(onCloseProfile);
       return true;
     }
+    if (isAdminOpen && onCloseAdmin) {
+      handleModalCloseWithHistory(onCloseAdmin);
+      return true;
+    }
     if (selectedCategory !== 'All' || searchQuery.trim().length > 0) {
       if (searchQuery.trim().length > 0) onClearSearch();
       if (selectedCategory !== 'All') onResetCategory();
@@ -145,6 +158,8 @@ export function useMobileBackHandler({
     onCloseCart,
     isProfileOpen,
     onCloseProfile,
+    isAdminOpen,
+    onCloseAdmin,
     selectedCategory,
     onResetCategory,
     searchQuery,

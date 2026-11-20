@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="color-scheme" content="light" />
     <title>Friends 4 Ever Coffee Cafe • Digital Menu</title>
     <meta name="description" content="Digital menu for Friends 4 Ever Coffee Cafe fetching dynamic items from Google Sheets with live search, category filters, smart pricing badges, and reel previews." />
     <meta property="og:title" content="Friends 4 Ever Coffee Cafe • Digital Menu" />
@@ -13,22 +14,16 @@
     <script>
       (function() {
         try {
-          var saved = localStorage.getItem('friends4ever_theme');
-          var isDark = saved === 'dark' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-          if (isDark) {
-            document.documentElement.classList.add('dark');
-            document.documentElement.setAttribute('data-theme', 'dark');
-            document.documentElement.style.colorScheme = 'dark';
-          } else {
-            document.documentElement.classList.remove('dark');
-            document.documentElement.setAttribute('data-theme', 'light');
-            document.documentElement.style.colorScheme = 'light';
-          }
+          localStorage.setItem('friends4ever_theme', 'light');
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.style.colorScheme = 'light';
         } catch (e) {}
       })();
     </script>
   </head>
-  <body class="bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 antialiased selection:bg-amber-200 selection:text-amber-900 overflow-x-hidden w-full max-w-full">
+  <body class="bg-stone-50 text-stone-900 antialiased selection:bg-amber-200 selection:text-amber-900 overflow-x-hidden w-full max-w-full">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

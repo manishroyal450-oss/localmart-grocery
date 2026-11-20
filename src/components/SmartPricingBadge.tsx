@@ -1,6 +1,6 @@
 import React from 'react';
 import { MenuItem } from '../types';
-import { Tag, Plus, Check } from 'lucide-react';
+import { Tag, Plus } from 'lucide-react';
 
 interface SmartPricingBadgeProps {
   item: MenuItem;
@@ -15,7 +15,6 @@ export const SmartPricingBadge: React.FC<SmartPricingBadgeProps> = ({
 }) => {
   const { standardPrice, halfPrice, fullPrice, regularPrice, mediumPrice, largePrice, offer } = item;
 
-  // Case 1: Pizza sizes (Regular / Medium / Large)
   const hasPizzaSizes = Boolean(regularPrice || mediumPrice || largePrice);
 
   const renderOfferBadge = () => {
@@ -23,211 +22,126 @@ export const SmartPricingBadge: React.FC<SmartPricingBadgeProps> = ({
     return (
       <div
         id={`offer-badge-${item.id}`}
-        className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-rose-500/15 via-amber-500/15 to-orange-500/15 dark:from-rose-950/60 dark:via-amber-950/60 dark:to-orange-950/60 border border-rose-300/80 dark:border-rose-700/80 text-[11px] font-black text-rose-600 dark:text-rose-400 shadow-2xs tracking-wide select-none"
+        className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700"
         title={`Special Owner Offer: ${offer}`}
       >
-        <Tag className="w-3 h-3 text-rose-500 dark:text-rose-400 shrink-0" />
-        <span className="font-extrabold uppercase">{offer}</span>
+        <Tag className="w-3 h-3 text-rose-600 shrink-0" />
+        <span>{offer}</span>
       </div>
     );
   };
 
   if (hasPizzaSizes) {
-    const regularQty = variantQuantities?.['Regular'] || 0;
-    const mediumQty = variantQuantities?.['Medium'] || 0;
-    const largeQty = variantQuantities?.['Large'] || 0;
+    const sizeOptions = [
+      { key: 'Regular', short: 'R', price: regularPrice },
+      { key: 'Medium', short: 'M', price: mediumPrice },
+      { key: 'Large', short: 'L', price: largePrice },
+    ].filter((opt) => Boolean(opt.price));
 
     return (
       <div className="flex flex-col items-start gap-0.5" id={`pricing-sizes-container-${item.id}`}>
         <div className="flex flex-wrap items-center gap-1.5" id={`pricing-sizes-${item.id}`}>
-          {regularPrice && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectVariant?.('Regular', Number(regularPrice));
-              }}
-              title="Click to add Regular size to cart"
-              className={`group/btn inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 border ${
-                regularQty > 0
-                  ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-400 dark:border-rose-700 ring-1 ring-rose-400'
-                  : 'bg-amber-100/90 dark:bg-amber-950/80 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-amber-950 dark:text-amber-200 border-amber-300 dark:border-amber-800 hover:border-rose-400'
-              }`}
-            >
-              <span
-                className={`text-[10px] font-black uppercase tracking-wider mr-1 px-1 py-0.2 rounded transition-colors ${
-                  regularQty > 0
-                    ? 'bg-rose-600 text-white'
-                    : 'bg-amber-200/80 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 group-hover/btn:bg-rose-600 group-hover/btn:text-white'
+          {sizeOptions.map((opt) => {
+            const qty = variantQuantities?.[opt.key] || 0;
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectVariant?.(opt.key, Number(opt.price));
+                }}
+                title={`Click to add ${opt.key} size to cart`}
+                className={`group/btn inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 border tabular-nums ${
+                  qty > 0
+                    ? 'bg-rose-50 text-rose-700 border-rose-500 ring-1 ring-rose-400/50'
+                    : 'bg-stone-50 hover:bg-rose-50/70 text-stone-800 border-stone-200 hover:border-rose-300'
                 }`}
               >
-                R
-              </span>
-              <span className="font-bold">₹{regularPrice}</span>
-              {regularQty > 0 ? (
-                <span className="ml-1 px-1.5 py-0.2 bg-rose-600 text-white text-[10px] font-black rounded-full leading-none">
-                  {regularQty}
+                <span
+                  className={`text-[10px] font-bold uppercase px-1 py-0.2 rounded ${
+                    qty > 0
+                      ? 'bg-rose-600 text-white'
+                      : 'bg-stone-200/80 text-stone-700 group-hover/btn:bg-rose-600 group-hover/btn:text-white transition-colors'
+                  }`}
+                >
+                  {opt.short}
                 </span>
-              ) : (
-                <Plus className="w-2.5 h-2.5 ml-1 opacity-0 group-hover/btn:opacity-100 text-rose-600 dark:text-rose-400 transition-opacity" />
-              )}
-            </button>
-          )}
-
-          {mediumPrice && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectVariant?.('Medium', Number(mediumPrice));
-              }}
-              title="Click to add Medium size to cart"
-              className={`group/btn inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 border ${
-                mediumQty > 0
-                  ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-400 dark:border-rose-700 ring-1 ring-rose-400'
-                  : 'bg-amber-100/90 dark:bg-amber-950/80 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-amber-950 dark:text-amber-200 border-amber-300 dark:border-amber-800 hover:border-rose-400'
-              }`}
-            >
-              <span
-                className={`text-[10px] font-black uppercase tracking-wider mr-1 px-1 py-0.2 rounded transition-colors ${
-                  mediumQty > 0
-                    ? 'bg-rose-600 text-white'
-                    : 'bg-amber-200/80 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 group-hover/btn:bg-rose-600 group-hover/btn:text-white'
-                }`}
-              >
-                M
-              </span>
-              <span className="font-bold">₹{mediumPrice}</span>
-              {mediumQty > 0 ? (
-                <span className="ml-1 px-1.5 py-0.2 bg-rose-600 text-white text-[10px] font-black rounded-full leading-none">
-                  {mediumQty}
-                </span>
-              ) : (
-                <Plus className="w-2.5 h-2.5 ml-1 opacity-0 group-hover/btn:opacity-100 text-rose-600 dark:text-rose-400 transition-opacity" />
-              )}
-            </button>
-          )}
-
-          {largePrice && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectVariant?.('Large', Number(largePrice));
-              }}
-              title="Click to add Large size to cart"
-              className={`group/btn inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 border ${
-                largeQty > 0
-                  ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-400 dark:border-rose-700 ring-1 ring-rose-400'
-                  : 'bg-amber-100/90 dark:bg-amber-950/80 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-amber-950 dark:text-amber-200 border-amber-300 dark:border-amber-800 hover:border-rose-400'
-              }`}
-            >
-              <span
-                className={`text-[10px] font-black uppercase tracking-wider mr-1 px-1 py-0.2 rounded transition-colors ${
-                  largeQty > 0
-                    ? 'bg-rose-600 text-white'
-                    : 'bg-amber-200/80 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 group-hover/btn:bg-rose-600 group-hover/btn:text-white'
-                }`}
-              >
-                L
-              </span>
-              <span className="font-bold">₹{largePrice}</span>
-              {largeQty > 0 ? (
-                <span className="ml-1 px-1.5 py-0.2 bg-rose-600 text-white text-[10px] font-black rounded-full leading-none">
-                  {largeQty}
-                </span>
-              ) : (
-                <Plus className="w-2.5 h-2.5 ml-1 opacity-0 group-hover/btn:opacity-100 text-rose-600 dark:text-rose-400 transition-opacity" />
-              )}
-            </button>
-          )}
+                <span className="font-bold">₹{opt.price}</span>
+                {qty > 0 ? (
+                  <span className="ml-0.5 px-1.5 py-0.2 bg-rose-600 text-white text-[10px] font-bold rounded-full leading-none">
+                    {qty}
+                  </span>
+                ) : (
+                  <Plus className="w-2.5 h-2.5 text-stone-400 group-hover/btn:text-rose-600 transition-colors" />
+                )}
+              </button>
+            );
+          })}
         </div>
-        {/* Owner Special Offer shown right below the prices */}
         {renderOfferBadge()}
       </div>
     );
   }
 
-  // Case 2: Half / Full Portion Badges
   const hasPortionPricing = Boolean(halfPrice || (fullPrice && !standardPrice));
 
   if (hasPortionPricing) {
-    const halfQty = variantQuantities?.['Half'] || 0;
-    const fullQty = variantQuantities?.['Full'] || 0;
+    const portionOptions = [
+      { key: 'Half', price: halfPrice },
+      { key: 'Full', price: fullPrice },
+    ].filter((opt) => Boolean(opt.price));
 
     return (
       <div className="flex flex-col items-start gap-0.5" id={`pricing-halffull-container-${item.id}`}>
         <div className="flex flex-wrap items-center gap-1.5" id={`pricing-halffull-${item.id}`}>
-          {halfPrice && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectVariant?.('Half', Number(halfPrice));
-              }}
-              title="Click to add Half portion to cart"
-              className={`group/btn inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 border ${
-                halfQty > 0
-                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border-emerald-400 dark:border-emerald-700 ring-1 ring-emerald-400'
-                  : 'bg-emerald-100/90 dark:bg-emerald-950/80 hover:bg-emerald-200/80 text-emerald-950 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800'
-              }`}
-            >
-              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide mr-1">Half</span>
-              <span className="font-bold">₹{halfPrice}</span>
-              {halfQty > 0 ? (
-                <span className="ml-1 px-1.5 py-0.2 bg-emerald-600 text-white text-[10px] font-black rounded-full leading-none">
-                  {halfQty}
+          {portionOptions.map((opt) => {
+            const qty = variantQuantities?.[opt.key] || 0;
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectVariant?.(opt.key, Number(opt.price));
+                }}
+                title={`Click to add ${opt.key} portion to cart`}
+                className={`group/btn inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 border tabular-nums ${
+                  qty > 0
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-500 ring-1 ring-emerald-400/50'
+                    : 'bg-stone-50 hover:bg-emerald-50/70 text-stone-800 border-stone-200 hover:border-emerald-300'
+                }`}
+              >
+                <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">
+                  {opt.key}
                 </span>
-              ) : (
-                <Plus className="w-2.5 h-2.5 ml-1 opacity-0 group-hover/btn:opacity-100 text-emerald-600 dark:text-emerald-400 transition-opacity" />
-              )}
-            </button>
-          )}
-
-          {fullPrice && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectVariant?.('Full', Number(fullPrice));
-              }}
-              title="Click to add Full portion to cart"
-              className={`group/btn inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 border ${
-                fullQty > 0
-                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border-emerald-400 dark:border-emerald-700 ring-1 ring-emerald-400'
-                  : 'bg-emerald-100/90 dark:bg-emerald-950/80 hover:bg-emerald-200/80 text-emerald-950 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800'
-              }`}
-            >
-              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide mr-1">Full</span>
-              <span className="font-bold">₹{fullPrice}</span>
-              {fullQty > 0 ? (
-                <span className="ml-1 px-1.5 py-0.2 bg-emerald-600 text-white text-[10px] font-black rounded-full leading-none">
-                  {fullQty}
-                </span>
-              ) : (
-                <Plus className="w-2.5 h-2.5 ml-1 opacity-0 group-hover/btn:opacity-100 text-emerald-600 dark:text-emerald-400 transition-opacity" />
-              )}
-            </button>
-          )}
+                <span className="font-bold">₹{opt.price}</span>
+                {qty > 0 ? (
+                  <span className="ml-0.5 px-1.5 py-0.2 bg-emerald-600 text-white text-[10px] font-bold rounded-full leading-none">
+                    {qty}
+                  </span>
+                ) : (
+                  <Plus className="w-2.5 h-2.5 text-stone-400 group-hover/btn:text-emerald-600 transition-colors" />
+                )}
+              </button>
+            );
+          })}
         </div>
-        {/* Owner Special Offer shown right below the prices */}
         {renderOfferBadge()}
       </div>
     );
   }
 
-  // Case 3: Standard Price (or fallback to fullPrice/any price)
   const displayPrice = standardPrice || fullPrice;
 
   if (displayPrice) {
     return (
       <div className="flex flex-col items-start" id={`pricing-standard-container-${item.id}`}>
         <div className="inline-flex items-baseline" id={`pricing-standard-${item.id}`}>
-          <span className="text-xl font-extrabold text-stone-900 dark:text-stone-100 tracking-tight">
+          <span className="text-lg font-extrabold text-stone-900 tracking-tight tabular-nums">
             ₹{displayPrice}
           </span>
         </div>
-        {/* Owner Special Offer shown right below the price */}
         {renderOfferBadge()}
       </div>
     );

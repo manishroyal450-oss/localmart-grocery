@@ -12,6 +12,97 @@ export interface UserProfile {
 const USERS_STORAGE_KEY = 'friends4ever_registered_users_v1';
 const CURRENT_USER_STORAGE_KEY = 'friends4ever_active_user_v1';
 
+export const FIXED_PIN_CODE = '246725';
+export const GMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+export const INDIA_COUNTRY_CODE = '+91';
+
+export function extractIndianTenDigits(input: string): string {
+  const trimmed = (input || '').trim();
+  let stripped = trimmed;
+  if (stripped.startsWith('+91')) {
+    stripped = stripped.slice(3);
+  } else if (stripped.startsWith('0091')) {
+    stripped = stripped.slice(4);
+  } else {
+    const rawDigits = stripped.replace(/\D/g, '');
+    if (rawDigits.length === 12 && rawDigits.startsWith('91')) {
+      return rawDigits.slice(2, 12);
+    }
+  }
+  return stripped.replace(/\D/g, '').slice(0, 10);
+}
+
+export function parseIndianContactNumber(input: string): {
+  valid: boolean;
+  digits: string;
+  formatted: string;
+  error?: string;
+} {
+  const trimmed = (input || '').trim();
+  if (!trimmed) {
+    return {
+      valid: false,
+      digits: '',
+      formatted: '',
+      error: 'Please enter a 10-digit Indian mobile number (+91).',
+    };
+  }
+
+  // Reject any foreign country code
+  if (trimmed.startsWith('+') && !trimmed.startsWith('+91')) {
+    return {
+      valid: false,
+      digits: '',
+      formatted: '',
+      error: 'Only India country code (+91) is valid.',
+    };
+  }
+  if (trimmed.startsWith('00') && !trimmed.startsWith('0091')) {
+    return {
+      valid: false,
+      digits: '',
+      formatted: '',
+      error: 'Only India country code (+91) is valid.',
+    };
+  }
+
+  let body = trimmed;
+  if (body.startsWith('+91')) {
+    body = body.slice(3);
+  } else if (body.startsWith('0091')) {
+    body = body.slice(4);
+  } else {
+    const rawDigits = body.replace(/\D/g, '');
+    if (rawDigits.length === 12 && rawDigits.startsWith('91')) {
+      body = rawDigits.slice(2);
+    }
+  }
+
+  const digitsOnly = body.replace(/\D/g, '');
+  if (digitsOnly.length > 10) {
+    return {
+      valid: false,
+      digits: digitsOnly,
+      formatted: '',
+      error: 'Contact number 10 digits se zyada nahi ho sakta (+91 India only).',
+    };
+  }
+  if (digitsOnly.length !== 10) {
+    return {
+      valid: false,
+      digits: digitsOnly,
+      formatted: '',
+      error: 'Please enter an exact 10-digit mobile number (+91 India code).',
+    };
+  }
+
+  return {
+    valid: true,
+    digits: digitsOnly,
+    formatted: `${INDIA_COUNTRY_CODE} ${digitsOnly}`,
+  };
+}
+
 export function getRegisteredUsers(): UserProfile[] {
   try {
     const raw = localStorage.getItem(USERS_STORAGE_KEY);
@@ -61,17 +152,25 @@ export function registerUser(data: {
   if (!data.fullName.trim()) {
     return { success: false, error: 'Please enter your Full Name.' };
   }
-  if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-    return { success: false, error: 'Please enter a valid Email address.' };
+  if (!normalizedEmail || !GMAIL_REGEX.test(normalizedEmail)) {
+    return {
+      success: false,
+      error: 'Email address must end with @gmail.com (e.g. yourname@gmail.com).',
+    };
   }
-  if (!data.contactNumber.trim() || data.contactNumber.replace(/\D/g, '').length < 10) {
-    return { success: false, error: 'Please enter a valid 10-digit Contact Number.' };
+  const phoneCheck = parseIndianContactNumber(data.contactNumber);
+  if (!phoneCheck.valid) {
+    return { success: false, error: phoneCheck.error || 'Please enter a valid 10-digit +91 mobile number.' };
   }
   if (!data.address.trim()) {
     return { success: false, error: 'Please enter your Delivery Address.' };
   }
-  if (!data.pinCode.trim() || !/^\d{6}$/.test(data.pinCode.trim())) {
-    return { success: false, error: 'Please enter a valid 6-digit Pin Code.' };
+  const trimmedPinCode = (data.pinCode || FIXED_PIN_CODE).trim();
+  if (trimmedPinCode !== FIXED_PIN_CODE) {
+    return {
+      success: false,
+      error: `Pin Code is fixed to ${FIXED_PIN_CODE} only.`,
+    };
   }
   // 5 digit password rule
   if (!/^\d{5}$/.test(trimmedPassword)) {
@@ -88,9 +187,9 @@ export function registerUser(data: {
     id: `user_${Date.now()}`,
     fullName: data.fullName.trim(),
     email: normalizedEmail,
-    contactNumber: data.contactNumber.trim(),
+    contactNumber: phoneCheck.formatted,
     address: data.address.trim(),
-    pinCode: data.pinCode.trim(),
+    pinCode: FIXED_PIN_CODE,
     password: trimmedPassword,
     createdAt: new Date().toISOString(),
   };
@@ -114,8 +213,11 @@ export function loginUser(
   const normalizedEmail = email.trim().toLowerCase();
   const trimmedPassword = password.trim();
 
-  if (!normalizedEmail) {
-    return { success: false, error: 'Please enter your Email.' };
+  if (!normalizedEmail || !GMAIL_REGEX.test(normalizedEmail)) {
+    return {
+      success: false,
+      error: 'Please enter a valid Email ending with @gmail.com.',
+    };
   }
   if (!/^\d{5}$/.test(trimmedPassword)) {
     return { success: false, error: 'Password must be exactly 5 digits.' };
@@ -151,6 +253,32 @@ export function updateUserProfile(
     return { success: false, error: 'User not found.' };
   }
 
+  if (updates.email !== undefined) {
+    const normalizedEditEmail = updates.email.trim().toLowerCase();
+    if (!GMAIL_REGEX.test(normalizedEditEmail)) {
+      return {
+        success: false,
+        error: 'Email address must end with @gmail.com (e.g. yourname@gmail.com).',
+      };
+    }
+  }
+
+  let formattedContact = users[index].contactNumber;
+  if (updates.contactNumber !== undefined) {
+    const phoneCheck = parseIndianContactNumber(updates.contactNumber);
+    if (!phoneCheck.valid) {
+      return {
+        success: false,
+        error: phoneCheck.error || 'Please enter a valid 10-digit +91 mobile number.',
+      };
+    }
+    formattedContact = phoneCheck.formatted;
+  }
+
+  if (updates.pinCode !== undefined && updates.pinCode.trim() !== FIXED_PIN_CODE) {
+    return { success: false, error: `Pin Code is fixed to ${FIXED_PIN_CODE} only.` };
+  }
+
   if (updates.password && !/^\d{5}$/.test(updates.password.trim())) {
     return { success: false, error: 'New password must be exactly 5 digits.' };
   }
@@ -159,6 +287,8 @@ export function updateUserProfile(
     ...users[index],
     ...updates,
     email: updates.email ? updates.email.trim().toLowerCase() : users[index].email,
+    contactNumber: formattedContact,
+    pinCode: FIXED_PIN_CODE,
   };
 
   users[index] = updatedUser;
@@ -170,4 +300,79 @@ export function updateUserProfile(
 
 export function logoutUser(): void {
   saveCurrentUser(null);
+}
+
+export async function sendEmailOtp(
+  email: string,
+  fullName?: string
+): Promise<{
+  success: boolean;
+  deliveryMode?: 'email' | 'preview';
+  previewOtp?: string;
+  message?: string;
+  error?: string;
+}> {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail || !GMAIL_REGEX.test(normalizedEmail)) {
+    return {
+      success: false,
+      error: 'Email address must end with @gmail.com (e.g. yourname@gmail.com).',
+    };
+  }
+
+  try {
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normalizedEmail, fullName: fullName || '' }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      return { success: false, error: data.error || 'Failed to send 3-digit OTP.' };
+    }
+    return data;
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || 'Unable to connect to OTP service.',
+    };
+  }
+}
+
+export async function verifyEmailOtp(
+  email: string,
+  otp: string
+): Promise<{
+  success: boolean;
+  verified?: boolean;
+  message?: string;
+  error?: string;
+}> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const trimmedOtp = otp.trim();
+
+  if (!normalizedEmail || !GMAIL_REGEX.test(normalizedEmail)) {
+    return { success: false, error: 'Please enter a valid @gmail.com address.' };
+  }
+  if (!/^\d{3}$/.test(trimmedOtp)) {
+    return { success: false, error: 'Please enter a valid 3-digit OTP.' };
+  }
+
+  try {
+    const res = await fetch('/api/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normalizedEmail, otp: trimmedOtp }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      return { success: false, error: data.error || 'Invalid 3-digit OTP.' };
+    }
+    return data;
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || 'Unable to verify OTP.',
+    };
+  }
 }

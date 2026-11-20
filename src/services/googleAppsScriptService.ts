@@ -1,6 +1,10 @@
 // Service for syncing orders, deducting stock, and adding amounts in Google Sheet / Excel
 // via Google Apps Script Web App Endpoint
 
+import { recordLocalCafeOrder, markOrderSyncedToFirestore } from './cafeOrderAdminService';
+import { auth } from '../firebase';
+import { saveCafeOrderToFirestore } from './firestoreOrdersService';
+
 export const GOOGLE_APPS_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbxHl-grnqg64pbYukq0WnDK73opMdgZ8n1WP7bxcdx7xO0NXJBw7jJPSX_aEnQtfFGLqA/exec';
 
@@ -9,21 +13,26 @@ export const CAFE_WHATSAPP_PHONE = '919719852037'; // +91 97198 52037
 export interface SheetOrderItem {
   name: string;
   item_name?: string;
+  itemname?: string;
   variant?: string;
   qty: number;
   stockdeduct?: number;
   price: number;
   total?: number;
+  customer_name?: string;
 }
 
 export interface SheetOrderPayload {
   bill_no: string;
+  user_id?: string;
+  customer_email?: string;
   customer_name: string;
   customer_phone: string;
   table_or_address?: string;
   order_type?: string;
   grandtotal: number;
   subtotal?: number;
+  delivery_fee?: number;
   notes?: string;
   items: SheetOrderItem[];
 }
@@ -58,26 +67,88 @@ export async function syncOrderToGoogleSheet(
   // Expire after 2 minutes to prevent unbounded growth
   setTimeout(() => syncedOrderIds.delete(orderId), 120000);
 
-  // Normalize payload
-  const formattedPayload = {
+  // Immediately record order in local Admin Store so Admin Panel & Customer Profile update in real time
+  const recordedOrder = recordLocalCafeOrder({
     bill_no: orderId,
-    order_id: orderId,
-    customer_name: order.customer_name || 'Guest',
-    customer_phone: order.customer_phone || '',
-    table_or_address: order.table_or_address || '',
-    order_type: order.order_type || 'dine-in',
-    subtotal: order.subtotal || order.grandtotal,
+    user_id: order.user_id,
+    firebase_uid: auth.currentUser?.uid,
+    customer_email: order.customer_email,
+    customer_name: order.customer_name,
+    customer_phone: order.customer_phone,
+    table_or_address: order.table_or_address,
+    order_type: order.order_type,
     grandtotal: order.grandtotal,
-    notes: order.notes || '',
-    timestamp: new Date().toISOString(),
-    items: order.items.map((item) => ({
+    subtotal: order.subtotal,
+    delivery_fee: order.delivery_fee,
+    notes: order.notes,
+    items: order.items,
+  });
+
+  if (auth.currentUser?.emailVerified) {
+    saveCafeOrderToFirestore(recordedOrder, auth.currentUser)
+      .then((fbRes) => {
+        if (fbRes.saved) {
+          markOrderSyncedToFirestore(orderId, auth.currentUser?.uid);
+        }
+      })
+      .catch((fbErr) => {
+        console.warn('[Firestore Order Sync Warning]:', fbErr);
+      });
+  }
+
+  // Normalize payload including new Sheet Columns U (coustomer Name), V (itemname), W (price)
+  const resolvedCustomerName = (order.customer_name || 'Guest').trim();
+  const normalizedItems = order.items.map((item) => {
+    const displayItemName =
+      item.variant && item.variant !== 'Standard'
+        ? `${item.item_name || item.name} (${item.variant}) x ${item.qty}`
+        : `${item.item_name || item.name} x ${item.qty}`;
+    const lineTotal = item.total ?? item.price * item.qty;
+
+    return {
       name: item.name,
       item_name: item.item_name || item.name,
+      itemname: displayItemName,
       variant: item.variant || 'Standard',
       qty: item.qty,
       stockdeduct: item.stockdeduct ?? item.qty,
       price: item.price,
-      total: item.total ?? item.price * item.qty,
+      total: lineTotal,
+      customer_name: resolvedCustomerName,
+      coustomer_name: resolvedCustomerName,
+    };
+  });
+
+  const combinedItemNames = normalizedItems.map((i) => i.itemname).join(', ');
+  const combinedPrices = normalizedItems.map((i) => i.total).join(', ');
+
+  const formattedPayload = {
+    bill_no: orderId,
+    order_id: orderId,
+    user_id: order.user_id || '',
+    firebase_uid: auth.currentUser?.uid || '',
+    customer_email: (order.customer_email || '').trim().toLowerCase(),
+    customer_name: resolvedCustomerName,
+    coustomer_name: resolvedCustomerName,
+    'coustomer Name': resolvedCustomerName, // Column U
+    itemname: combinedItemNames, // Column V
+    item_name: combinedItemNames, // Column V alias
+    price: order.grandtotal, // Column W (order total price)
+    item_prices: combinedPrices, // Individual line prices
+    customer_phone: order.customer_phone || '',
+    table_or_address: order.table_or_address || '',
+    order_type: order.order_type || 'dine-in',
+    subtotal: order.subtotal || order.grandtotal,
+    delivery_fee: order.delivery_fee ?? 0,
+    grandtotal: order.grandtotal,
+    notes: order.notes || '',
+    timestamp: new Date().toISOString(),
+    items: normalizedItems,
+    // Direct row mapping for Columns U, V, W
+    order_log_rows: normalizedItems.map((item) => ({
+      coustomer_name: resolvedCustomerName, // Col U
+      itemname: item.itemname, // Col V
+      price: item.total, // Col W
     })),
   };
 

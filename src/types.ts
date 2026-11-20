@@ -89,6 +89,50 @@ export interface Order {
   createdAt: string;
 }
 
+export type CafeOrderStatus = 'pending' | 'confirmed';
+
+export interface CafeAdminOrderItem {
+  name: string;
+  variant?: string;
+  qty: number;
+  price: number;
+  total: number;
+}
+
+export interface CafeAdminOrder {
+  orderId: string;
+  userId?: string;
+  firebaseUid?: string;
+  customerEmail?: string;
+  customerName: string;
+  customerPhone: string;
+  orderType: 'delivery' | 'dine-in' | 'takeaway';
+  tableOrAddress: string;
+  items: CafeAdminOrderItem[];
+  itemSummary: string;
+  subtotal: number;
+  deliveryFee: number;
+  grandTotal: number;
+  status: CafeOrderStatus;
+  createdAt: string;
+  dateKey: string;
+  notes?: string;
+  syncedToFirestore?: boolean;
+}
+
+export interface SheetOrderLogEntry {
+  rowNumber: number;
+  customerName: string;
+  itemName: string;
+  price: number;
+}
+
+export interface SheetSalesSummary {
+  sheetCustomTotal: number;
+  sheetGrandTotal: number;
+  entries: SheetOrderLogEntry[];
+}
+
 export const CATEGORIES = [
   'Fruits & Vegetables',
   'Dairy & Eggs',

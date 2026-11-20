@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ShoppingCart,
   X,
@@ -18,13 +18,31 @@ import {
   FileSpreadsheet,
   Truck,
   ChevronDown,
+  Lock,
+  UserPlus,
+  Clock,
+  RefreshCw,
+  ShoppingBag,
+  Cloud,
 } from 'lucide-react';
-import { MenuItem, CafeCartItem, DeliveryInfo } from '../types';
+import { MenuItem, CafeCartItem, DeliveryInfo, CafeAdminOrder } from '../types';
 import { getItemImageUrl } from '../services/menuService';
 import { calculateCartSummary } from '../services/cartService';
-import { UserProfile } from '../services/authService';
+import {
+  UserProfile,
+  INDIA_COUNTRY_CODE,
+  extractIndianTenDigits,
+} from '../services/authService';
 import { ProfessionalBillModal, BillData } from './ProfessionalBillModal';
 import { syncOrderToGoogleSheet } from '../services/googleAppsScriptService';
+import {
+  CAFE_ORDERS_UPDATED_EVENT,
+  fetchCustomerOrders,
+  getLocalCustomerOrders,
+  mergeOrdersLists,
+} from '../services/cafeOrderAdminService';
+import { useFirebase } from '../context/FirebaseContext';
+import { subscribeToCustomerOrdersFirestore } from '../services/firestoreOrdersService';
 
 interface CafeCartDrawerProps {
   isOpen: boolean;
@@ -61,6 +79,81 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
   const [isBillModalOpen, setIsBillModalOpen] = useState<boolean>(false);
   const [activeBillData, setActiveBillData] = useState<BillData | null>(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState<boolean>(false);
+  const { firebaseUser, isAuthReady, firebaseLoading, signInWithGoogle } = useFirebase();
+  const [localCustomerOrders, setLocalCustomerOrders] = useState<CafeAdminOrder[]>([]);
+  const [firestoreOrders, setFirestoreOrders] = useState<CafeAdminOrder[]>([]);
+  const [isRefreshingOrders, setIsRefreshingOrders] = useState<boolean>(false);
+
+  const customerOrders = React.useMemo(
+    () => mergeOrdersLists(localCustomerOrders, firestoreOrders),
+    [localCustomerOrders, firestoreOrders]
+  );
+
+  const loadCustomerOrders = useCallback(
+    async (silent = false) => {
+      if (!currentUser && !firebaseUser?.uid) {
+        setLocalCustomerOrders([]);
+        return;
+      }
+      if (!silent) setIsRefreshingOrders(true);
+      try {
+        const latest = await fetchCustomerOrders(currentUser, firebaseUser?.uid);
+        setLocalCustomerOrders(latest);
+      } finally {
+        if (!silent) setIsRefreshingOrders(false);
+      }
+    },
+    [currentUser, firebaseUser?.uid]
+  );
+
+  // Keep customerOrders strictly scoped to active currentUser and updated dynamically
+  useEffect(() => {
+    if (!currentUser) {
+      setLocalCustomerOrders([]);
+      setFirestoreOrders([]);
+      setOrderPlaced(null);
+      return;
+    }
+
+    setLocalCustomerOrders(getLocalCustomerOrders(currentUser, firebaseUser?.uid));
+    if (!isOpen) return;
+
+    loadCustomerOrders(false);
+
+    const handleSync = () => {
+      setLocalCustomerOrders(getLocalCustomerOrders(currentUser, firebaseUser?.uid));
+      loadCustomerOrders(true);
+    };
+    window.addEventListener(CAFE_ORDERS_UPDATED_EVENT, handleSync);
+    window.addEventListener('storage', handleSync);
+    const pollTimer = window.setInterval(() => loadCustomerOrders(true), 4000);
+
+    return () => {
+      window.removeEventListener(CAFE_ORDERS_UPDATED_EVENT, handleSync);
+      window.removeEventListener('storage', handleSync);
+      window.clearInterval(pollTimer);
+    };
+  }, [currentUser, firebaseUser?.uid, isOpen, loadCustomerOrders]);
+
+  // Real-time Firestore listener when customer has Google Firebase connected
+  useEffect(() => {
+    if (!isOpen || !currentUser || !isAuthReady || !firebaseUser?.emailVerified) {
+      if (!firebaseUser?.emailVerified) setFirestoreOrders([]);
+      return;
+    }
+
+    const unsubscribe = subscribeToCustomerOrdersFirestore(
+      firebaseUser.uid,
+      (orders) => {
+        setFirestoreOrders(orders);
+      },
+      (err) => {
+        console.warn('Cart Firestore orders stream warning:', err);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [isOpen, currentUser, isAuthReady, firebaseUser?.uid, firebaseUser?.emailVerified]);
 
   // Mobile touch swipe-to-close gesture handling
   const [dragOffset, setDragOffset] = useState<number>(0);
@@ -130,7 +223,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
   useEffect(() => {
     if (currentUser) {
       setCustomerName(currentUser.fullName || '');
-      setCustomerPhone(currentUser.contactNumber || '');
+      setCustomerPhone(extractIndianTenDigits(currentUser.contactNumber || ''));
       setTableOrAddress(currentUser.address || '');
     }
   }, [currentUser, isOpen]);
@@ -158,6 +251,11 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
   const packagingCharge = 0;
   const grandTotal = subtotal + activeDeliveryCharge + packagingCharge;
 
+  const formattedCustomerPhone = (() => {
+    const digits = extractIndianTenDigits(customerPhone || currentUser?.contactNumber || '');
+    return digits.length === 10 ? `${INDIA_COUNTRY_CODE} ${digits}` : '';
+  })();
+
   // Open professional PDF bill preview for current cart items
   const handleOpenCurrentBill = () => {
     if (cartItems.length === 0) return;
@@ -166,7 +264,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
       orderId: tempOrderId,
       orderType,
       customerName: customerName.trim() || (currentUser?.fullName ? currentUser.fullName : 'Guest'),
-      customerPhone: customerPhone.trim() || (currentUser?.contactNumber ? currentUser.contactNumber : ''),
+      customerPhone: formattedCustomerPhone,
       tableOrAddress: tableOrAddress.trim() || (currentUser?.address ? currentUser.address : ''),
       specialInstructions: specialInstructions.trim(),
       items: cartItems.map((ci) => ({
@@ -200,7 +298,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
       orderId: orderPlaced.orderId,
       orderType: orderPlaced.orderType || orderType,
       customerName: orderPlaced.customerName || customerName.trim() || 'Guest',
-      customerPhone: orderPlaced.customerPhone || customerPhone.trim(),
+      customerPhone: orderPlaced.customerPhone || formattedCustomerPhone,
       tableOrAddress: orderPlaced.tableOrAddress || tableOrAddress.trim(),
       specialInstructions: orderPlaced.specialInstructions || specialInstructions.trim(),
       items: (orderPlaced.items || []).map((ci: any) => ({
@@ -219,9 +317,18 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
     setIsBillModalOpen(true);
   };
 
-  // Handle WhatsApp Checkout
+  // Handle WhatsApp Checkout (Requires active user profile)
   const handlePlaceOrderViaWhatsApp = () => {
     if (cartItems.length === 0) return;
+    if (!currentUser) {
+      onOpenProfile?.();
+      return;
+    }
+    const phoneDigits = extractIndianTenDigits(customerPhone || currentUser.contactNumber || '');
+    if (phoneDigits.length !== 10) {
+      return;
+    }
+    const verifiedPhone = `${INDIA_COUNTRY_CODE} ${phoneDigits}`;
     setIsPlacingOrder(true);
 
     const itemsSummary = cartItems
@@ -246,7 +353,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
       `🧾 *Order ID:* #${orderId}\n` +
       `📌 *Order Type:* ${typeLabel}\n` +
       `👤 *Customer Name:* ${customerName || 'Guest'}\n` +
-      `📞 *Phone:* ${customerPhone || 'Not provided'}\n` +
+      `📞 *Phone:* ${verifiedPhone}\n` +
       (tableOrAddress
         ? orderType === 'delivery'
           ? `📍 *Delivery Address:* ${tableOrAddress}\n`
@@ -272,8 +379,10 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
     // Auto-sync order with Google Sheet via Google Apps Script (deducts stock and adds amount in Excel)
     const sheetPayload = {
       bill_no: orderId,
+      user_id: currentUser.id,
+      customer_email: currentUser.email,
       customer_name: customerName.trim() || (currentUser?.fullName ? currentUser.fullName : 'Guest'),
-      customer_phone: customerPhone.trim() || (currentUser?.contactNumber ? currentUser.contactNumber : ''),
+      customer_phone: verifiedPhone,
       table_or_address: tableOrAddress.trim() || (currentUser?.address ? currentUser.address : ''),
       order_type: orderType,
       grandtotal: grandTotal,
@@ -309,7 +418,7 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
       total: grandTotal,
       orderType,
       customerName: customerName.trim() || 'Guest',
-      customerPhone: customerPhone.trim(),
+      customerPhone: verifiedPhone,
       tableOrAddress: tableOrAddress.trim(),
       specialInstructions: specialInstructions.trim(),
       dateStr: new Date().toLocaleDateString('en-IN', {
@@ -324,6 +433,9 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
       }),
     });
 
+    // Empty cart immediately once order is dispatched to WhatsApp
+    onClearCart();
+    setSpecialInstructions('');
     setIsPlacingOrder(false);
     window.open(`https://wa.me/${cafePhone}?text=${encoded}`, '_blank');
   };
@@ -405,87 +517,219 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-5">
           {/* Case 1: Order Just Placed Success Confirmation */}
           {orderPlaced ? (
-            <div className="bg-white rounded-3xl p-6 border border-emerald-200 text-center shadow-sm my-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center mb-4 border border-emerald-200">
-                <CheckCircle2 className="w-10 h-10 animate-bounce" />
-              </div>
-              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                Order Received!
-              </span>
-              <h3 className="text-xl font-black text-stone-900 mt-2">
-                Thank You for Ordering!
-              </h3>
-              <p className="text-xs text-stone-600 mt-1">
-                Order ID: <span className="font-bold text-stone-900">#{orderPlaced.orderId}</span>
-              </p>
-              <p className="text-xs text-stone-500 mt-2">
-                Our kitchen is preparing your fresh order. Estimated preparation time: 15-20 minutes.
-              </p>
+            (() => {
+              const liveOrder = customerOrders.find((o) => o.orderId === orderPlaced.orderId);
+              const isConfirmed = liveOrder?.status === 'confirmed';
+              return (
+                <div className="bg-white rounded-3xl p-6 border border-emerald-200 text-center shadow-sm my-4">
+                  <div
+                    className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 border ${
+                      isConfirmed
+                        ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                        : 'bg-amber-50 text-amber-600 border-amber-200'
+                    }`}
+                  >
+                    {isConfirmed ? (
+                      <CheckCircle2 className="w-10 h-10" />
+                    ) : (
+                      <Clock className="w-9 h-9" />
+                    )}
+                  </div>
 
-              <div className="mt-5 p-3.5 bg-stone-50 rounded-2xl border border-stone-200 text-left text-xs space-y-1.5">
-                <div className="flex justify-between font-bold text-stone-800">
-                  <span>Total Paid/Payable:</span>
-                  <span className="text-rose-600">₹{orderPlaced.total}</span>
-                </div>
-                <div className="flex justify-between text-stone-500 text-[11px]">
-                  <span>Items:</span>
-                  <span>{orderPlaced.items?.length || 1} distinct dishes</span>
-                </div>
-                <div className="flex justify-between text-stone-500 text-[11px]">
-                  <span>Order Time:</span>
-                  <span>{orderPlaced.time}</span>
-                </div>
-
-                {/* Live Google Apps Script / Excel Update Feedback */}
-                <div className="pt-2 border-t border-stone-200 dark:border-stone-800 flex items-center justify-between text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                  <span className="flex items-center gap-1.5">
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    Excel / Sheet Updated:
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full ${
+                      isConfirmed
+                        ? 'text-emerald-800 bg-emerald-100'
+                        : 'text-amber-800 bg-amber-100'
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isConfirmed ? 'bg-emerald-600' : 'bg-amber-600 animate-pulse'
+                      }`}
+                    />
+                    {isConfirmed ? 'Order Confirmed!' : 'Pending • Waiting for Confirmation'}
                   </span>
-                  <span className="bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full text-[10px] text-emerald-800 dark:text-emerald-300">
-                    Stock Deducted & Amount Added
-                  </span>
-                </div>
-              </div>
 
-              <div className="mt-6 flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={handleOpenPlacedOrderBill}
-                  className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>Print / Save Tax Invoice (PDF)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOrderPlaced(null);
-                    onClose();
-                  }}
-                  className="w-full py-3 rounded-xl bg-stone-900 text-white font-bold text-xs shadow-md hover:bg-stone-800 transition-all cursor-pointer"
-                >
-                  Explore More Dishes
-                </button>
-              </div>
-            </div>
+                  <h3 className="text-xl font-black text-stone-900 mt-2">
+                    {isConfirmed ? 'Order Confirmed by Cafe!' : 'Order Sent on WhatsApp!'}
+                  </h3>
+                  <p className="text-xs text-stone-600 mt-1">
+                    Order ID: <span className="font-bold text-stone-900">#{orderPlaced.orderId}</span>
+                  </p>
+                  <p className="text-xs text-stone-500 mt-2">
+                    {isConfirmed
+                      ? 'Aapka order confirm ho gaya hai! Hamari kitchen aapka fresh order ready kar rahi hai.'
+                      : 'Admin aapka order verify karke confirm karega — live status yahan apne aap update ho jayega.'}
+                  </p>
+
+                  <div className="mt-5 p-3.5 bg-stone-50 rounded-2xl border border-stone-200 text-left text-xs space-y-1.5">
+                    <div className="flex justify-between font-bold text-stone-800">
+                      <span>Total Paid/Payable:</span>
+                      <span className="text-rose-600">₹{orderPlaced.total}</span>
+                    </div>
+                    <div className="flex justify-between text-stone-500 text-[11px]">
+                      <span>Live Status:</span>
+                      <span className={`font-bold ${isConfirmed ? 'text-emerald-700' : 'text-amber-700'}`}>
+                        {isConfirmed ? 'Order Confirmed' : 'Pending'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-stone-500 text-[11px]">
+                      <span>Items:</span>
+                      <span>{orderPlaced.items?.length || 1} distinct dishes</span>
+                    </div>
+                    <div className="flex justify-between text-stone-500 text-[11px]">
+                      <span>Order Time:</span>
+                      <span>{orderPlaced.time}</span>
+                    </div>
+
+                    {/* Live Google Apps Script / Excel Update Feedback */}
+                    <div className="pt-2 border-t border-stone-200 flex items-center justify-between text-[11px] font-bold text-emerald-700">
+                      <span className="flex items-center gap-1.5">
+                        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        Excel / Sheet Updated:
+                      </span>
+                      <span className="bg-emerald-100 px-2 py-0.5 rounded-full text-[10px] text-emerald-800">
+                        Stock Deducted &amp; Amount Added
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={handleOpenPlacedOrderBill}
+                      className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Printer className="w-4 h-4" />
+                      <span>Print / Save Tax Invoice (PDF)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOrderPlaced(null);
+                        onClose();
+                      }}
+                      className="w-full py-3 rounded-xl bg-stone-900 text-white font-bold text-xs shadow-md hover:bg-stone-800 transition-all cursor-pointer"
+                    >
+                      Explore More Dishes
+                    </button>
+                  </div>
+                </div>
+              );
+            })()
           ) : cartItems.length === 0 ? (
-            /* Case 2: Cart is Empty */
-            <div className="h-full flex flex-col items-center justify-center text-center py-12 px-4">
-              <div className="w-20 h-20 rounded-3xl bg-white border border-stone-200 shadow-sm flex items-center justify-center mb-4 text-stone-400">
-                <ShoppingCart className="w-10 h-10 opacity-40 text-stone-500" />
+            /* Case 2: Cart is Empty (+ Profile-Scoped Live Order Status when logged in) */
+            <div className="flex flex-col justify-between py-6 space-y-6">
+              <div className="flex flex-col items-center justify-center text-center py-6 px-4">
+                <div className="w-20 h-20 rounded-3xl bg-white border border-stone-200 shadow-sm flex items-center justify-center mb-4 text-stone-400">
+                  <ShoppingCart className="w-10 h-10 opacity-40 text-stone-500" />
+                </div>
+                <h3 className="text-lg font-black text-stone-900">Your Cart is Empty</h3>
+                <p className="text-xs text-stone-500 max-w-xs mt-1 mb-5 leading-relaxed">
+                  Add delicious pizzas, burgers, refreshing cold coffees, shakes, and snacks from the menu.
+                </p>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-6 py-2.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                >
+                  Explore Menu
+                </button>
               </div>
-              <h3 className="text-lg font-black text-stone-900">Your Cart is Empty</h3>
-              <p className="text-xs text-stone-500 max-w-xs mt-1 mb-6 leading-relaxed">
-                Add delicious pizzas, burgers, refreshing cold coffees, shakes, and snacks from the menu.
-              </p>
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-6 py-2.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
-              >
-                Explore Menu
-              </button>
+
+              {currentUser && customerOrders.length > 0 && (
+                <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs space-y-3">
+                  <div className="flex items-center justify-between gap-2 pb-2 border-b border-stone-100">
+                    <div>
+                      <h4 className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                        <ShoppingBag className="w-3.5 h-3.5 text-rose-600" />
+                        <span>{currentUser.fullName.split(' ')[0]}&apos;s Live Order Status</span>
+                      </h4>
+                      <p className="text-[11px] text-stone-500 mt-0.5 flex items-center gap-1">
+                        <Cloud className={`w-3 h-3 ${firebaseUser?.emailVerified ? 'text-emerald-600' : 'text-stone-400'}`} />
+                        <span>
+                          {firebaseUser?.emailVerified
+                            ? 'Firebase Firestore Live Sync Active'
+                            : 'Sirf aapke profile ke orders dikh rahe hain'}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {!firebaseUser?.emailVerified && (
+                        <button
+                          type="button"
+                          onClick={signInWithGoogle}
+                          disabled={firebaseLoading}
+                          className="px-2 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-bold cursor-pointer disabled:opacity-60"
+                        >
+                          {firebaseLoading ? '...' : 'Sync Firebase'}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => loadCustomerOrders(false)}
+                        disabled={isRefreshingOrders}
+                        className="px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-60"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isRefreshingOrders ? 'animate-spin' : ''}`} />
+                        <span>Refresh</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {customerOrders.map((order) => {
+                      const isConfirmed = order.status === 'confirmed';
+                      return (
+                        <div
+                          key={order.orderId}
+                          className={`p-3 rounded-xl border ${
+                            isConfirmed
+                              ? 'bg-emerald-50/70 border-emerald-200'
+                              : 'bg-amber-50/60 border-amber-200'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono text-xs font-bold text-stone-900">
+                              #{order.orderId}
+                            </span>
+                            <span className="font-mono text-xs font-bold text-stone-900 tabular-nums">
+                              ₹{order.grandTotal.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-stone-600 mt-1 leading-relaxed">
+                            {order.itemSummary}
+                          </p>
+                          <div className="mt-2 pt-2 border-t border-stone-200/70 flex items-center justify-between gap-2">
+                            <span
+                              className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${
+                                isConfirmed ? 'text-emerald-700' : 'text-amber-700'
+                              }`}
+                            >
+                              {isConfirmed ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                              ) : (
+                                <Clock className="w-3.5 h-3.5 shrink-0" />
+                              )}
+                              <span>
+                                {isConfirmed
+                                  ? 'Order Confirmed'
+                                  : 'Pending • Waiting for Confirmation'}
+                              </span>
+                            </span>
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${
+                                isConfirmed ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+                              }`}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             /* Case 3: Cart has Items */
@@ -642,9 +886,10 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                       <button
                         type="button"
                         onClick={onOpenProfile}
-                        className="text-[10px] font-bold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
+                        className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2.5 py-1 rounded-full border border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors cursor-pointer flex items-center gap-1"
                       >
-                        Login for autofill
+                        <UserPlus className="w-3 h-3" />
+                        <span>Create / Login Profile</span>
                       </button>
                     )
                   )}
@@ -658,13 +903,31 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
                     onChange={(e) => setCustomerName(e.target.value)}
                     className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
                   />
-                  <input
-                    type="tel"
-                    placeholder="Mobile Number"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
-                  />
+                  <div className="space-y-1">
+                    <div className="flex items-center rounded-xl border border-stone-200 dark:border-stone-700 focus-within:ring-2 focus-within:ring-rose-500/20 focus-within:border-rose-500 bg-stone-50 dark:bg-stone-800 overflow-hidden">
+                      <span className="px-2.5 py-2 bg-stone-100 dark:bg-stone-700/80 border-r border-stone-200 dark:border-stone-700 text-[11px] font-black text-stone-700 dark:text-stone-200 select-none flex-shrink-0">
+                        🇮🇳 +91
+                      </span>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
+                        placeholder="10-digit number"
+                        value={customerPhone}
+                        onChange={(e) => {
+                          const raw = e.target.value.trim();
+                          if (raw.startsWith('+') && !raw.startsWith('+91')) return;
+                          setCustomerPhone(extractIndianTenDigits(raw));
+                        }}
+                        className="w-full text-xs px-2.5 py-2 bg-transparent text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none"
+                      />
+                    </div>
+                    {customerPhone.length > 0 && customerPhone.length < 10 && (
+                      <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400 px-1">
+                        {customerPhone.length}/10 digits (+91 India only)
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Dine-In Table Box (Column T) vs Delivery Address vs Pickup Note */}
@@ -843,16 +1106,62 @@ export const CafeCartDrawer: React.FC<CafeCartDrawerProps> = ({
               <span>Print / Download PDF Bill (Friends 4 Ever Cafe)</span>
             </button>
 
-            {/* WhatsApp Checkout Button (Single Direct Action) */}
+            {/* Profile Required Notice when user is not logged in */}
+            {!currentUser && (
+              <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/70 flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                  <p className="text-[11px] font-bold text-amber-900 dark:text-amber-200 leading-snug">
+                    WhatsApp se order karne ke liye pehle apna Profile banayein.
+                  </p>
+                </div>
+                {onOpenProfile && (
+                  <button
+                    type="button"
+                    onClick={onOpenProfile}
+                    className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-black flex items-center gap-1 flex-shrink-0 shadow-xs active:scale-95 transition-all cursor-pointer"
+                  >
+                    <UserPlus className="w-3 h-3" />
+                    <span>Create Profile</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* WhatsApp Checkout Button (Disabled until profile is created & valid +91 10-digit phone) */}
             <button
               type="button"
               onClick={handlePlaceOrderViaWhatsApp}
-              disabled={isPlacingOrder}
-              className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-md flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer disabled:opacity-80"
-              title="Send order directly to Cafe on WhatsApp"
+              disabled={isPlacingOrder || !currentUser || !formattedCustomerPhone}
+              className={`w-full py-3.5 px-4 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${
+                !currentUser || !formattedCustomerPhone
+                  ? 'bg-stone-200 dark:bg-stone-800 text-stone-500 dark:text-stone-400 border border-stone-300 dark:border-stone-700 cursor-not-allowed shadow-none'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md active:scale-98 cursor-pointer disabled:opacity-80'
+              }`}
+              title={
+                !currentUser
+                  ? 'Create your profile first to place an order on WhatsApp'
+                  : !formattedCustomerPhone
+                  ? 'Enter a valid 10-digit +91 Indian mobile number'
+                  : 'Send order directly to Cafe on WhatsApp'
+              }
             >
-              <MessageCircle className="w-4 h-4 fill-white" />
-              <span>{isPlacingOrder ? 'Opening WhatsApp...' : 'Order via WhatsApp 📲'}</span>
+              {!currentUser ? (
+                <>
+                  <Lock className="w-4 h-4" />
+                  <span>Order via WhatsApp (Profile Required)</span>
+                </>
+              ) : !formattedCustomerPhone ? (
+                <>
+                  <Lock className="w-4 h-4" />
+                  <span>Enter Valid +91 10-Digit Mobile</span>
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="w-4 h-4 fill-white" />
+                  <span>{isPlacingOrder ? 'Opening WhatsApp...' : 'Order via WhatsApp 📲'}</span>
+                </>
+              )}
             </button>
 
             <p className="text-[10px] text-center text-stone-500 dark:text-stone-400 font-medium">

@@ -1,0 +1,247 @@
+{
+  "entities": {
+    "UserPublicProfile": {
+      "title": "UserPublicProfile",
+      "description": "Non-PII customer profile summary anchored at users/{userId}.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Authentication UID of the customer."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Customer display name."
+        },
+        "pinCode": {
+          "type": "string",
+          "pattern": "^246725$",
+          "description": "Fixed service delivery pin code (246725)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when user profile was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when user profile was last updated."
+        }
+      },
+      "required": ["uid", "displayName", "pinCode", "createdAt", "updatedAt"]
+    },
+    "UserPrivateContact": {
+      "title": "UserPrivateContact",
+      "description": "Isolated PII contact details stored at users/{userId}/private/contact.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner Firebase Authentication UID."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 150,
+          "pattern": "^[a-zA-Z0-9._%+-]+@gmail\\.com$",
+          "description": "Verified Gmail address ending in @gmail.com."
+        },
+        "contactNumber": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^\\+91 [0-9]{10}$",
+          "description": "Indian mobile number formatted as +91 XXXXXXXXXX."
+        },
+        "address": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400,
+          "description": "Customer delivery address."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when contact record was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when contact record was last updated."
+        }
+      },
+      "required": ["uid", "email", "contactNumber", "address", "createdAt", "updatedAt"]
+    },
+    "CafeOrder": {
+      "title": "CafeOrder",
+      "description": "WhatsApp cafe order document scoped to customer Firebase UID and managed by Cafe Admin.",
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique order identifier matching document ID."
+        },
+        "firebaseUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Authenticated customer Firebase UID who placed the order."
+        },
+        "profileId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Local customer profile identifier."
+        },
+        "customerEmail": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 150,
+          "pattern": "^[a-zA-Z0-9._%+-]+@gmail\\.com$",
+          "description": "Customer @gmail.com email address."
+        },
+        "customerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Customer full name."
+        },
+        "customerPhone": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^\\+91 [0-9]{10}$",
+          "description": "Customer +91 10-digit Indian phone number."
+        },
+        "orderType": {
+          "type": "string",
+          "enum": ["delivery", "dine-in", "takeaway"],
+          "description": "Fulfillment mode."
+        },
+        "tableOrAddress": {
+          "type": "string",
+          "maxLength": 400,
+          "description": "Table number or delivery address."
+        },
+        "items": {
+          "type": "array",
+          "description": "Bounded list (1-50) of ordered items."
+        },
+        "itemSummary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "Human-readable item summary."
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "Items subtotal in INR."
+        },
+        "deliveryFee": {
+          "type": "number",
+          "description": "Delivery charge in INR."
+        },
+        "grandTotal": {
+          "type": "number",
+          "description": "Grand total amount in INR."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "confirmed"],
+          "description": "Order confirmation status toggled by Admin."
+        },
+        "dateKey": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+          "description": "Local YYYY-MM-DD date key for daily sales aggregation."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Optional special instructions."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when order was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when order status was last updated."
+        }
+      },
+      "required": [
+        "orderId",
+        "firebaseUid",
+        "profileId",
+        "customerEmail",
+        "customerName",
+        "customerPhone",
+        "orderType",
+        "tableOrAddress",
+        "items",
+        "itemSummary",
+        "subtotal",
+        "deliveryFee",
+        "grandTotal",
+        "status",
+        "dateKey",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Server-managed admin access record.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 150
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserPublicProfile" },
+      "description": "Non-PII customer profile document."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateContact" },
+      "description": "Isolated PII contact details document ('contact') for a customer."
+    },
+    "/cafeOrders/{orderId}": {
+      "schema": { "$ref": "#/entities/CafeOrder" },
+      "description": "Customer WhatsApp orders scoped to firebaseUid and managed by Cafe Admin."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Privileged Cafe Admin allowlist records."
+    }
+  }
+}
